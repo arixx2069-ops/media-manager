@@ -1,0 +1,7 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "prisma generate && npm run build",
+  "env": {
+    "DEMO_MODE": "true"
+  }
+}
