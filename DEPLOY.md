@@ -1,6 +1,13 @@
-# Deploy SocialMngmnt (public URL forever)
+# Deploy Aeen-iq.Social-manager (public URL)
 
-Free hosting on **Vercel** — stays online, anyone with the link can open it in Firefox or Chrome.
+Free hosting on **Vercel** — stays online 24/7 on the free plan.
+
+**Target URL:** `https://aeen-iq-social-manager.vercel.app`  
+(Set project name to `aeen-iq-social-manager` when deploying.)
+
+**Login password:** `aeen-iq` (change `SITE_PASSWORD` in Vercel env vars for production.)
+
+---
 
 ## Option A — Vercel website (easiest, ~5 minutes)
 
@@ -11,7 +18,8 @@ Free hosting on **Vercel** — stays online, anyone with the link can open it in
 5. Add environment variable (optional but recommended):
    - `DEMO_MODE` = `true`
 6. When finished, you get a URL like:
-   - `https://socialmngmnt.vercel.app`
+   - `https://aeen-iq-social-manager.vercel.app`
+   - `SITE_PASSWORD` = `aeen-iq` (or your own password)
    - Share that link — it stays live on the free plan.
 
 Custom domain (optional): Project → Settings → Domains.

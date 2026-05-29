@@ -6,7 +6,7 @@ export default function InstallPage() {
       <header className="mb-8">
         <h2 className="text-2xl font-semibold">Install the app</h2>
         <p className="text-zinc-500 mt-1">
-          Use SocialMngmnt in <strong className="text-zinc-400">Firefox</strong> or{" "}
+          Use Aeen-iq.Social-manager in <strong className="text-zinc-400">Firefox</strong> or{" "}
           <strong className="text-zinc-400">Chrome</strong> — same website, installable in
           both. No app store required.
         </p>
@@ -61,7 +61,7 @@ export default function InstallPage() {
             </li>
             <li>
               Or: <strong className="text-zinc-300">⋮</strong> →{" "}
-              <strong className="text-zinc-300">Install SocialMngmnt…</strong>
+              <strong className="text-zinc-300">Install Aeen-iq…</strong>
             </li>
           </ol>
           <p className="text-xs text-zinc-500 mt-4 mb-2">Chrome on Android</p>

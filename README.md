@@ -1,4 +1,4 @@
-# SocialMngmnt — Social Media Tracker
+# Aeen-iq.Social-manager
 
 A unified dashboard to track engagement (likes, comments, followers) across **Instagram**, **TikTok**, **Telegram**, **YouTube**, and more. Includes team access management, positive-comment highlights, an **AI Advisor** for content strategy, and a path to publish on **Google Play**.
 
@@ -12,7 +12,19 @@ A unified dashboard to track engagement (likes, comments, followers) across **In
 | AI Advisor (what to post & do) | ✅ Demo; OpenAI when configured |
 | Google Play (TWA / Capacitor guide) | ✅ In-app `/google-play` page |
 
-## Quick start
+## Public URL (share with everyone)
+
+The app is **not online yet** until you deploy once (free).
+
+**In Iraq?** Vercel SMS often fails — use **[DEPLOY-IRAQ.md](./DEPLOY-IRAQ.md)** (Render / Netlify / Cloudflare with GitHub, no phone).
+
+**Elsewhere — Vercel:** see [DEPLOY.md](./DEPLOY.md).
+
+Login password for everyone: **`aeen-iq`**
+
+---
+
+## Quick start (local only)
 
 ```bash
 cd Socialmngmnt
@@ -22,7 +34,9 @@ npx prisma db push
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000) — only works on your computer until you deploy.
+
+**Login password:** `aeen-iq` (change via `SITE_PASSWORD` in `.env`).
 
 **Demo mode** is on by default (`DEMO_MODE=true`). No API keys required for a manager demo.
 
@@ -50,7 +64,7 @@ Works as a normal website in any browser, and can be **installed** in both **Fir
 | Browser | How to install |
 |---------|----------------|
 | **Firefox** | ☰ menu → **Install…** / **Install this site as an app** (desktop); **Add to Home screen** (mobile) |
-| **Chrome** | Address bar install icon, sidebar button, or **⋮ → Install SocialMngmnt** |
+| **Chrome** | Address bar install icon, sidebar button, or **⋮ → Install app** |
 
 1. Run or deploy over **HTTPS** (or `localhost` for dev).
 2. Open the URL in Firefox or Chrome.

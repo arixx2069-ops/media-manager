@@ -1,0 +1,11 @@
+# Deploy on Netlify (GitHub login — usually no SMS)
+[build]
+  command = "npm install && npx prisma generate && npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  NODE_VERSION = "22"
+  DEMO_MODE = "true"

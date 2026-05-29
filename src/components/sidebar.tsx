@@ -11,6 +11,8 @@ import {
   Download,
 } from "lucide-react";
 import { InstallApp } from "@/components/install-app";
+import { LogoutButton } from "@/components/logout-button";
+import { APP_NAME } from "@/lib/constants";
 
 const nav = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -27,8 +29,10 @@ export function Sidebar() {
   return (
     <aside className="w-64 border-r border-zinc-800 bg-[#0d0d14] flex flex-col shrink-0">
       <div className="p-6 border-b border-zinc-800">
-        <h1 className="text-lg font-semibold tracking-tight">SocialMngmnt</h1>
-        <p className="text-xs text-zinc-500 mt-1">Multi-platform tracker</p>
+        <h1 className="text-lg font-semibold tracking-tight leading-tight">
+          {APP_NAME}
+        </h1>
+        <p className="text-xs text-zinc-500 mt-1">Password protected</p>
       </div>
       <nav className="flex-1 p-3 space-y-1">
         {nav.map(({ href, label, icon: Icon }) => {
@@ -50,7 +54,8 @@ export function Sidebar() {
         })}
       </nav>
       <InstallApp />
-      <div className="p-4 border-t border-zinc-800">
+      <div className="p-4 border-t border-zinc-800 space-y-2">
+        <LogoutButton />
         <span className="inline-flex items-center gap-1.5 text-xs text-amber-400/90 bg-amber-400/10 px-2 py-1 rounded">
           Demo mode
         </span>

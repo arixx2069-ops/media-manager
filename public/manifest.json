@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "SocialMngmnt",
-  "short_name": "SocialMngmnt",
-  "description": "Social media tracker and AI advisor",
+  "name": "Aeen-iq.Social-manager",
+  "short_name": "Aeen-iq",
+  "description": "Social media tracker and AI advisor by Aeen-iq.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
@@ -10,7 +10,6 @@
   "theme_color": "#6366f1",
   "orientation": "any",
   "prefer_related_applications": false,
-  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icon-192.png",

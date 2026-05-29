@@ -37,7 +37,7 @@ function ChromeSteps() {
     <ol className="text-xs text-zinc-500 mt-2 space-y-1 list-decimal list-inside">
       <li>Install icon in the address bar, or sidebar Install button</li>
       <li>
-        Or menu <strong className="text-zinc-400">⋮ → Install SocialMngmnt…</strong>
+        Or menu <strong className="text-zinc-400">⋮ → Install app…</strong>
       </li>
     </ol>
   );

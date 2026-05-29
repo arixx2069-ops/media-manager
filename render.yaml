@@ -1,0 +1,21 @@
+# Deploy on Render.com (works in Iraq — sign up with GitHub, no SMS)
+# Dashboard: https://dashboard.render.com → New → Blueprint → connect repo
+services:
+  - type: web
+    name: aeen-iq-social-manager
+    runtime: node
+    plan: free
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npm start
+    healthCheckPath: /login
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: DEMO_MODE
+        value: "true"
+      - key: SITE_PASSWORD
+        value: aeen-iq
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        value: file:./dev.db
