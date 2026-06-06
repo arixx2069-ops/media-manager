@@ -79,3 +79,12 @@ model AiRecommendation {
   priority  String   @default("medium")
   createdAt DateTime @default(now())
 }
+
+model AccessControl {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  status    String   @default("pending") // pending, approved, denied
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

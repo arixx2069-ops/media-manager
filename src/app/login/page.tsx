@@ -23,7 +23,8 @@ function LoginForm() {
         body: JSON.stringify({ password }),
       });
       if (!res.ok) {
-        setError("Wrong password. Try again.");
+        const data = await res.json();
+        setError(data.error || "Wrong password. Try again.");
         return;
       }
       const from = searchParams.get("from") || "/";
@@ -37,20 +38,20 @@ function LoginForm() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-[#0a0a0f]">
-      <div className="w-full max-w-sm rounded-2xl border border-zinc-800 bg-[#12121a] p-8 shadow-xl">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="p-2 rounded-lg bg-indigo-600/20 text-indigo-400">
+    <div className="relative z-10 min-h-[100dvh] flex items-center justify-center p-4 safe-top safe-bottom bg-[var(--background)]">
+      <div className="w-full max-w-sm editorial-card p-6 sm:p-8 shadow-none">
+        <div className="flex items-center gap-3 mb-8 border-b border-[var(--card-border)] pb-6">
+          <div className="p-2 text-[var(--accent)]" style={{ background: "var(--accent-soft)" }}>
             <Lock className="w-5 h-5" />
           </div>
           <div>
-            <h1 className="text-lg font-semibold">{APP_NAME}</h1>
-            <p className="text-xs text-zinc-500">Enter password to continue</p>
+            <h1 className="font-display text-xl font-semibold">{APP_NAME}</h1>
+            <p className="text-xs text-[var(--muted)] mt-1">Enter the site password</p>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <label className="block text-sm text-zinc-400">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <label className="block text-xs uppercase tracking-wider text-[var(--muted)]">
             Password
             <input
               type="password"
@@ -58,16 +59,12 @@ function LoginForm() {
               onChange={(e) => setPassword(e.target.value)}
               required
               autoFocus
-              className="mt-2 w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2.5 text-zinc-100"
+              className="mt-2 w-full px-3 py-3 sm:py-2.5 text-sm"
               placeholder="Enter password"
             />
           </label>
-          {error && <p className="text-sm text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg text-sm"
-          >
+          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          <button type="submit" disabled={loading} className="btn-primary w-full">
             {loading ? "Checking…" : "Enter"}
           </button>
         </form>
@@ -80,7 +77,7 @@ export default function LoginPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen flex items-center justify-center text-zinc-500">
+        <div className="min-h-screen flex items-center justify-center text-[var(--muted)]">
           Loading…
         </div>
       }

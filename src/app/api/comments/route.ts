@@ -1,21 +1,40 @@
 import { NextResponse } from "next/server";
+import { resolveCredentials } from "@/lib/oauth/credentials";
 import { getAllAdapters } from "@/lib/platforms";
+
+const COMMENT_PLATFORMS = ["INSTAGRAM", "FACEBOOK", "TIKTOK", "TELEGRAM"] as const;
 
 export async function GET() {
   try {
-    const adapters = getAllAdapters().slice(0, 4);
+    const creds = await resolveCredentials();
+    const adapters = getAllAdapters(creds).filter(
+      (a) =>
+        COMMENT_PLATFORMS.includes(
+          a.platform as (typeof COMMENT_PLATFORMS)[number]
+        ) && a.isConfigured()
+    );
+
     const withPlatform = await Promise.all(
       adapters.map(async (a) => {
-        const list = await a.fetchComments(10);
+        const list = await a.fetchComments(15);
         return list
           .filter((c) => c.isPositive)
-          .map((c) => ({ ...c, platform: a.platform }));
+          .map((c) => ({
+            externalId: c.externalId,
+            author: c.author,
+            text: c.text,
+            platform: a.platform,
+            postedAt: c.postedAt.toISOString(),
+          }));
       })
     );
 
     const comments = withPlatform
       .flat()
-      .sort((a, b) => b.postedAt.getTime() - a.postedAt.getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
+      );
 
     return NextResponse.json({ comments });
   } catch (e) {

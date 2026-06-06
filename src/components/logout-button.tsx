@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { useLocale } from "@/components/locale-provider";
 
 export function LogoutButton() {
   const router = useRouter();
+  const { t } = useLocale();
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -16,10 +18,10 @@ export function LogoutButton() {
     <button
       type="button"
       onClick={handleLogout}
-      className="flex items-center gap-2 w-full text-xs text-zinc-500 hover:text-zinc-300 px-2 py-1.5 rounded"
+      className="flex items-center gap-2 w-full text-sm text-[var(--muted)] hover:text-[var(--foreground)] px-2 py-3 sm:py-2 rounded-lg touch-manipulation"
     >
       <LogOut className="w-3.5 h-3.5" />
-      Sign out
+      {t.logout}
     </button>
   );
 }

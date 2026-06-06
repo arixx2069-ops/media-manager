@@ -1,18 +1,28 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Fraunces, Noto_Sans_Arabic, Space_Mono } from "next/font/google";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
+import { LocaleProvider } from "@/components/locale-provider";
 import { PwaRegister } from "@/components/pwa-register";
+import { ThemeProvider } from "@/components/theme-provider";
 import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/constants";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceMono = Space_Mono({
+  variable: "--font-mono",
   subsets: ["latin"],
+  weight: ["400", "700"],
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const fraunces = Fraunces({
+  variable: "--font-display",
   subsets: ["latin"],
+  weight: ["400", "500", "600"],
+});
+
+const notoArabic = Noto_Sans_Arabic({
+  variable: "--font-arabic",
+  subsets: ["arabic"],
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
@@ -21,11 +31,8 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
   applicationName: APP_SHORT_NAME,
   icons: {
-    icon: [
-      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/icon-512.png", sizes: "512x512", type: "image/png" },
-    ],
-    apple: [{ url: "/icon-192.png", sizes: "192x192", type: "image/png" }],
+    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
   appleWebApp: {
     capable: true,
@@ -36,9 +43,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#6366f1",
+  themeColor: "#f4efe6",
   width: "device-width",
   initialScale: 1,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
@@ -47,12 +55,20 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="light" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen`}
+        className={`${spaceMono.variable} ${fraunces.variable} ${notoArabic.variable} antialiased min-h-screen`}
+        style={{
+          fontFamily:
+            "var(--font-mono), var(--font-arabic), ui-monospace, monospace",
+        }}
       >
-        <PwaRegister />
-        <AppShell>{children}</AppShell>
+        <ThemeProvider>
+          <LocaleProvider>
+            <PwaRegister />
+            <AppShell>{children}</AppShell>
+          </LocaleProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

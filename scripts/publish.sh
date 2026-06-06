@@ -15,7 +15,7 @@ echo ""
 echo "==> Deploying to Vercel (build runs on Vercel servers)..."
 echo "    First time: browser opens — log in with Google/GitHub/email."
 echo ""
-npx vercel deploy --prod --name aeen-iq-social-manager
+npx vercel deploy --prod --name smm-social-media-manager
 
 echo ""
 echo "Done. Copy the 'Production' URL above and share it with anyone."

@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { AUTH_COOKIE, isValidSession } from "@/lib/auth";
+import { AUTH_COOKIE, isAuthRequired, isValidSession } from "@/lib/auth";
 
-const PUBLIC_PATHS = ["/login", "/api/auth"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/api/auth",
+  "/api/oauth/meta/callback",
+  "/api/oauth/tiktok/callback",
+];
 
 function isPublicPath(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -23,16 +28,25 @@ function isStaticAsset(pathname: string): boolean {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  const session = request.cookies.get(AUTH_COOKIE)?.value;
+  if (!isAuthRequired()) {
+    if (pathname === "/login") {
+      return NextResponse.redirect(new URL("/", request.url));
+    }
+    return NextResponse.next();
+  }
 
-  if (pathname === "/login" && isValidSession(session)) {
+  const session = request.cookies.get(AUTH_COOKIE)?.value;
+  const authed = isValidSession(session);
+
+  if (pathname === "/login" && authed) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
   if (isPublicPath(pathname) || isStaticAsset(pathname)) {
     return NextResponse.next();
   }
-  if (isValidSession(session)) {
+
+  if (authed) {
     return NextResponse.next();
   }
 

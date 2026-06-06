@@ -1,4 +1,4 @@
-# Aeen-iq.Social-manager
+# SMM Social Media Manager
 
 A unified dashboard to track engagement (likes, comments, followers) across **Instagram**, **TikTok**, **Telegram**, **YouTube**, and more. Includes team access management, positive-comment highlights, an **AI Advisor** for content strategy, and a path to publish on **Google Play**.
 

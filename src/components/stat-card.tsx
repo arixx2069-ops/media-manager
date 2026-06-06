@@ -9,16 +9,18 @@ type Props = {
 
 export function StatCard({ label, value, icon: Icon, sub }: Props) {
   return (
-    <div className="rounded-xl border border-zinc-800 bg-[#12121a] p-5">
+    <div className="editorial-card p-5 border-t-2 border-t-[var(--foreground)]">
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-sm text-zinc-500">{label}</p>
-          <p className="text-2xl font-semibold mt-1 tabular-nums">
+          <p className="eyebrow text-[0.62rem]">{label}</p>
+          <p className="font-display text-3xl font-medium mt-2 tabular-nums tracking-tight">
             {typeof value === "number" ? value.toLocaleString() : value}
           </p>
-          {sub && <p className="text-xs text-zinc-600 mt-1">{sub}</p>}
+          {sub && (
+            <p className="text-xs text-[var(--muted)] mt-1 opacity-80">{sub}</p>
+          )}
         </div>
-        <div className="p-2 rounded-lg bg-indigo-600/15 text-indigo-400">
+        <div className="p-2 text-[var(--accent)]" style={{ background: "var(--accent-soft)" }}>
           <Icon className="w-5 h-5" />
         </div>
       </div>

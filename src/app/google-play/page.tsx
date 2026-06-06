@@ -1,30 +1,31 @@
 export default function GooglePlayPage() {
   return (
-    <div className="p-8 max-w-3xl prose prose-invert prose-zinc max-w-none">
-      <header className="mb-8 not-prose">
-        <h2 className="text-2xl font-semibold">Google Play deployment</h2>
-        <p className="text-zinc-500 mt-1">
+    <div className="page-shell max-w-3xl mx-auto w-full">
+      <header className="mb-8 border-b border-[var(--card-border)] pb-6">
+        <p className="eyebrow mb-2">Deploy</p>
+        <h2 className="font-display text-3xl font-medium tracking-tight">Google Play deployment</h2>
+        <p className="text-[var(--muted)] mt-2">
           Ship SocialMngmnt as an Android app on the Google Play Store
         </p>
       </header>
 
-      <div className="space-y-6 text-zinc-300 text-sm leading-relaxed not-prose">
-        <section className="rounded-xl border border-zinc-800 bg-[#12121a] p-5">
-          <h3 className="font-semibold text-zinc-100 mb-2">
+      <div className="space-y-6 text-sm leading-relaxed">
+        <section className="editorial-card p-5 border-t-2 border-t-[var(--accent)]">
+          <h3 className="font-display font-medium mb-2">
             Recommended path: Trusted Web Activity (TWA)
           </h3>
-          <p className="text-zinc-400 mb-3">
+          <p className="text-[var(--muted)] mb-3">
             This project is a Next.js web app. The fastest way to list on Google Play
             is wrapping your hosted URL in a TWA — a full-screen Chrome tab that feels
             native, without rewriting in Kotlin.
           </p>
-          <ol className="list-decimal list-inside space-y-2 text-zinc-400">
+          <ol className="list-decimal list-inside space-y-2 text-[var(--muted)]">
             <li>Deploy the app (Vercel, Google Cloud Run, or Firebase Hosting)</li>
             <li>
               Use{" "}
               <a
                 href="https://github.com/GoogleChromeLabs/bubblewrap"
-                className="text-indigo-400 hover:underline"
+                className="text-link"
                 target="_blank"
                 rel="noreferrer"
               >
@@ -38,13 +39,13 @@ export default function GooglePlayPage() {
           </ol>
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-[#12121a] p-5">
-          <h3 className="font-semibold text-zinc-100 mb-2">Alternative: Capacitor</h3>
-          <p className="text-zinc-400">
+        <section className="editorial-card p-5">
+          <h3 className="font-display font-medium mb-2">Alternative: Capacitor</h3>
+          <p className="text-[var(--muted)]">
             Wrap the static export or WebView with{" "}
             <a
               href="https://capacitorjs.com/"
-              className="text-indigo-400 hover:underline"
+              className="text-link"
               target="_blank"
               rel="noreferrer"
             >
@@ -55,9 +56,9 @@ export default function GooglePlayPage() {
           </p>
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-[#12121a] p-5">
-          <h3 className="font-semibold text-zinc-100 mb-2">Google ecosystem extras</h3>
-          <ul className="list-disc list-inside space-y-1 text-zinc-400">
+        <section className="editorial-card p-5">
+          <h3 className="font-display font-medium mb-2">Google ecosystem extras</h3>
+          <ul className="list-disc list-inside space-y-1 text-[var(--muted)]">
             <li>Firebase Auth — sign-in for your team</li>
             <li>Firebase Cloud Messaging — engagement alerts</li>
             <li>Google Cloud Run — host the Next.js server</li>

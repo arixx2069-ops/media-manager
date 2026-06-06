@@ -12,10 +12,10 @@ const labels: Record<Platform, string> = {
 
 const colors: Record<Platform, string> = {
   INSTAGRAM: "bg-pink-500/15 text-pink-300",
-  TIKTOK: "bg-zinc-500/15 text-zinc-200",
+  TIKTOK: "bg-[var(--card-border)] text-[var(--foreground)]",
   TELEGRAM: "bg-sky-500/15 text-sky-300",
   YOUTUBE: "bg-red-500/15 text-red-300",
-  TWITTER: "bg-zinc-500/15 text-zinc-300",
+  TWITTER: "bg-[var(--card-border)] text-[var(--foreground)]",
   FACEBOOK: "bg-blue-500/15 text-blue-300",
   LINKEDIN: "bg-blue-600/15 text-blue-200",
 };

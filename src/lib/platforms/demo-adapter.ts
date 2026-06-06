@@ -45,9 +45,11 @@ export function createDemoAdapter(platform: Platform): SocialPlatformAdapter {
     },
     async addUser(user: PlatformUser): Promise<PlatformUser> {
       localUsers.push({
+        platform,
         username: user.username,
         displayName: user.displayName ?? user.username,
         role: user.role ?? "member",
+        isActive: true,
       });
       return user;
     },

@@ -1,7 +1,7 @@
-export const APP_NAME = "Aeen-iq.Social-manager";
-export const APP_SHORT_NAME = "Aeen-iq";
+export const APP_NAME = "SMM Social Media Manager";
+export const APP_SHORT_NAME = "SMM";
 export const APP_DESCRIPTION =
-  "Social media tracker and AI advisor by Aeen-iq.";
+  "Social media tracker and AI advisor — Instagram, Facebook, and TikTok.";
 
-/** Vercel project name → https://aeen-iq-social-manager.vercel.app */
-export const VERCEL_PROJECT_SLUG = "aeen-iq-social-manager";
+/** Vercel project name → https://smm-social-media-manager.vercel.app */
+export const VERCEL_PROJECT_SLUG = "smm-social-media-manager";

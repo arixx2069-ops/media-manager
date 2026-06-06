@@ -1,57 +1,92 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { PlatformBadge } from "@/components/platform-badge";
+import { useLocale } from "@/components/locale-provider";
+import { loadAccounts } from "@/lib/accounts";
 import type { Platform } from "@prisma/client";
 
-type Comment = {
-  platform: Platform;
+type ApiComment = {
+  externalId: string;
   author: string;
   text: string;
+  platform: Platform;
   postedAt: string;
 };
 
 export default function CommentsPage() {
-  const [comments, setComments] = useState<Comment[]>([]);
+  const { t } = useLocale();
+  const [accountCount, setAccountCount] = useState(0);
+  const [comments, setComments] = useState<ApiComment[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/comments")
-      .then((r) => r.json())
-      .then((d) => setComments(d.comments ?? []))
-      .finally(() => setLoading(false));
+    setAccountCount(loadAccounts().length);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      try {
+        const res = await fetch("/api/comments");
+        const data = (await res.json()) as { comments?: ApiComment[] };
+        if (!cancelled && data.comments) {
+          setComments(
+            data.comments.map((c) => ({
+              ...c,
+              postedAt:
+                typeof c.postedAt === "string"
+                  ? c.postedAt
+                  : new Date(c.postedAt).toISOString(),
+            }))
+          );
+        }
+      } catch {
+        if (!cancelled) setComments([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
-    <div className="p-8 max-w-3xl">
+    <div className="page-shell max-w-3xl mx-auto w-full">
       <header className="mb-8">
-        <h2 className="text-2xl font-semibold">Positive comments</h2>
-        <p className="text-zinc-500 mt-1">
-          Highlighted feedback from Instagram, TikTok, Telegram, and YouTube
-        </p>
+        <h2 className="text-2xl font-semibold">{t.comments.title}</h2>
+        <p className="text-[var(--muted)] mt-1">{t.comments.subtitle}</p>
       </header>
 
-      {loading ? (
-        <p className="text-zinc-500">Loading…</p>
+      {accountCount === 0 ? (
+        <p className="text-[var(--muted)]">
+          <Link href="/accounts" className="text-link">
+            {t.comments.addFirst}
+          </Link>{" "}
+          {t.comments.addFirstHint}
+        </p>
+      ) : loading ? (
+        <p className="text-[var(--muted)]">{t.comments.loading}</p>
       ) : comments.length === 0 ? (
-        <p className="text-zinc-500">No positive comments yet.</p>
+        <p className="text-[var(--muted)] text-sm">{t.comments.none}</p>
       ) : (
-        <ul className="space-y-4">
-          {comments.map((c, i) => (
+        <ul className="space-y-3">
+          {comments.map((c) => (
             <li
-              key={`${c.platform}-${c.author}-${i}`}
-              className="rounded-xl border border-zinc-800 bg-[#12121a] p-4"
+              key={`${c.platform}-${c.externalId}`}
+              className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-4"
             >
               <div className="flex items-center gap-2 mb-2">
                 <PlatformBadge platform={c.platform} />
-                <span className="text-sm font-medium text-zinc-300">
-                  @{c.author}
-                </span>
-                <span className="text-xs text-zinc-600 ml-auto">
-                  {new Date(c.postedAt).toLocaleString()}
+                <span className="text-xs text-[var(--muted)]">
+                  {t.comments.from} {c.author}
                 </span>
               </div>
-              <p className="text-zinc-300">{c.text}</p>
+              <p className="text-sm">{c.text}</p>
             </li>
           ))}
         </ul>

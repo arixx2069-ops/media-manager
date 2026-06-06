@@ -1,11 +1,17 @@
-# Start here — GitHub + Render (beginner guide)
+# Start here — GitHub + deploy (beginner guide)
 
-You need **2 free accounts** (no phone SMS on Render):
+You need **2 free accounts**:
 
 1. **GitHub** — stores your code online  
-2. **Render** — runs the website 24/7  
+2. **Netlify** or **Cloudflare Pages** — runs the website (no credit card)
+
+> **Render asks for a card even on Free** — skip Render. See **[DEPLOY-NO-CARD.md](./DEPLOY-NO-CARD.md)**.
 
 Password for your site: **`aeen-iq`**
+
+For **Instagram, Facebook, and TikTok live stats**, see **[API-SETUP.md](./API-SETUP.md)**.
+
+The app supports **Arabic (العربية)** and **light mode** from the sidebar toggles.
 
 ---
 
@@ -39,35 +45,31 @@ Password for your site: **`aeen-iq`**
 
 ---
 
-## Part 2 — Render (publish the website)
+## Part 2 — Netlify (publish the website, no card)
 
-### Step 1: Render account
+### Step 1: Netlify account
 
-1. Open **[render.com](https://render.com)**
-2. Click **Get Started** → **Sign in with GitHub**
-3. Allow Render to see your GitHub
+1. Open **[app.netlify.com](https://app.netlify.com)**
+2. **Sign up with GitHub** (same account as Part 1)
+3. No credit card needed for the free plan
 
-### Step 2: Create Web Service
+### Step 2: Import your repo
 
-1. Click **New +** (top right) → **Web Service**
-2. Under **Connect a repository**, find **`aeen-iq-social-manager`** → **Connect**
-3. If you don’t see it: **Configure account** → give Render access to that repo
+1. Click **Add new site** → **Import an existing project**
+2. **Deploy with GitHub** → authorize → pick **`aeen-iq-social-manager`**
 
-### Step 3: Settings (copy exactly)
+### Step 3: Build settings
 
 | Field | Value |
 |-------|--------|
-| **Name** | `aeen-iq-social-manager` |
-| **Region** | Frankfurt (or closest to you) |
 | **Branch** | `main` |
-| **Runtime** | **Node** |
-| **Build Command** | `npm install && npx prisma generate && npm run build` |
-| **Start Command** | `npm start` |
-| **Instance Type** | **Free** |
+| **Build command** | `npm install && npx prisma generate && npm run build` |
+
+(Netlify usually auto-detects Next.js.)
 
 ### Step 4: Environment variables
 
-Click **Advanced** → **Add Environment Variable** — add these **3**:
+Before deploy, open **Add environment variables** and add:
 
 | Key | Value |
 |-----|--------|
@@ -75,25 +77,45 @@ Click **Advanced** → **Add Environment Variable** — add these **3**:
 | `DEMO_MODE` | `true` |
 | `AUTH_SECRET` | `my-secret-aeen-iq-2024-change-me` |
 
+**Important:** All 3 must be set or login **`aeen-iq`** will not work.
+
 ### Step 5: Deploy
 
-1. Click **Create Web Service**
-2. Wait **5–15 minutes** (logs will scroll — wait until it says **Live**)
-3. At the top you’ll see a link like:  
-   **`https://aeen-iq-social-manager.onrender.com`**
+1. Click **Deploy site**
+2. Wait **5–15 minutes**
+3. Netlify gives a URL like **`https://random-name.netlify.app`**
+4. Optional: **Site configuration** → **Domain management** → change site name to `aeen-iq-social-manager`
 
-Open that link in **Firefox** (use **https://**).  
-Login password: **`aeen-iq`**
+Open the link in **Firefox** (**https://**). Password: **`aeen-iq`**
+
+### After deploy — use the app
+
+1. Log in with **`aeen-iq`**
+2. Sidebar → **My accounts** → add your real Instagram / TikTok username
+3. Click **Visit** to open the profile in a new tab
+4. Enter follower/like counts manually (until API keys are added)
 
 ---
 
-## If something fails on Render
+## If login fails on Netlify
 
-1. Click your service → **Logs**
-2. Common fixes:
-   - Build failed → check Build Command is copied exactly
-   - **Out of memory** on free plan → we can simplify the app later
-3. First visit after idle: wait **60 seconds** and refresh (free tier sleeps)
+1. **Site configuration → Environment variables** — confirm `SITE_PASSWORD` = `aeen-iq` and `AUTH_SECRET` is set
+2. **Deploys → Trigger deploy** (redeploy)
+3. Clear site cookies in Firefox and try again
+
+---
+
+## If Netlify build failed
+
+1. **Deploy log** → copy the red error
+2. Build command must be: `npm run build` (not `next export`)
+3. Re-upload latest code from your PC to GitHub, then redeploy
+
+---
+
+## If Netlify also asks for a card
+
+Use **Cloudflare Pages** or a **free tunnel** — full steps in **[DEPLOY-NO-CARD.md](./DEPLOY-NO-CARD.md)**.
 
 ---
 
