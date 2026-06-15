@@ -9,6 +9,11 @@ export function middleware(request: NextRequest) {
   const isApiAuth = pathname.startsWith("/api/auth");
   const isOAuth = pathname.startsWith("/api/oauth");
   const isPublicApi = isApiAuth || isOAuth;
+  const isVerificationFile = pathname.endsWith(".txt") && pathname.startsWith("/tiktok");
+
+  if (isVerificationFile) {
+    return NextResponse.next();
+  }
 
   if (pathname.startsWith("/api/")) {
     if (isPublicApi) {
