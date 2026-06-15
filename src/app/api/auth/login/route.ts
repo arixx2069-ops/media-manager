@@ -1,57 +1,39 @@
-import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE, createSessionToken, verifyPassword } from "@/lib/auth";
-import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
+import { login, AUTH_COOKIE } from "@/lib/auth";
 
-const prisma = new PrismaClient();
-
-export const runtime = "nodejs";
-
-export async function POST(request: NextRequest) {
+export async function POST(request: Request) {
   try {
-    const { email, password } = (await request.json()) as {
-      email?: string;
-      password?: string;
-    };
+    const { password } = await request.json();
 
-    if (!password) {
-      return NextResponse.json({ error: "Password is required" }, { status: 400 });
+    if (!password || typeof password !== "string") {
+      return NextResponse.json(
+        { error: "Password is required" },
+        { status: 400 }
+      );
     }
 
-    if (!verifyPassword(password)) {
-      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
-    }
-
-    if (email) {
-      const accessUser = await prisma.accessControl.findUnique({
-        where: { email: email.toLowerCase() },
-      });
-
-      if (accessUser && accessUser.status !== "approved") {
-        if (accessUser.status === "pending") {
-          return NextResponse.json(
-            { error: "Your access request is pending approval" },
-            { status: 403 }
-          );
-        }
-        if (accessUser.status === "denied") {
-          return NextResponse.json(
-            { error: "Your access has been denied" },
-            { status: 403 }
-          );
-        }
-      }
+    const valid = await login(password);
+    if (!valid) {
+      return NextResponse.json(
+        { error: "Wrong password. Try again." },
+        { status: 401 }
+      );
     }
 
     const response = NextResponse.json({ ok: true });
-    response.cookies.set(AUTH_COOKIE, createSessionToken(), {
+    response.cookies.set(AUTH_COOKIE, "authenticated", {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
       path: "/",
-      maxAge: 60 * 60 * 24 * 30,
+      maxAge: 60 * 60 * 24 * 7,
+      sameSite: "lax",
     });
+
     return response;
   } catch {
-    return NextResponse.json({ error: "Bad request" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Something went wrong. Try again." },
+      { status: 500 }
+    );
   }
 }

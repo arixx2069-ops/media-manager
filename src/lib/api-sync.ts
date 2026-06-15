@@ -1,56 +1,26 @@
-import type { Platform } from "@prisma/client";
-import {
-  loadAccounts,
-  saveAccounts,
-  type ConnectedAccount,
-} from "@/lib/accounts";
+import { syncAllPlatforms, syncPlatformStats, fetchPlatformComments } from "./oauth/client";
+import type { SyncResult } from "./oauth/client";
 
-type SyncUpdate = {
-  platform: Platform;
-  followers: number;
-  likes: number;
-  comments: number;
-  shares: number;
-  configured: boolean;
-};
+export type { SyncResult } from "./oauth/client";
 
-export async function syncAccountsFromApis(): Promise<{
-  ok: boolean;
-  anyConfigured: boolean;
-  accounts: ConnectedAccount[];
-}> {
-  const res = await fetch("/api/accounts/sync", { method: "POST" });
-  const data = (await res.json()) as {
-    updates?: SyncUpdate[];
-    anyConfigured?: boolean;
-    error?: string;
-  };
+export async function syncAll(): Promise<SyncResult[]> {
+  return syncAllPlatforms();
+}
 
-  if (!res.ok) {
-    return { ok: false, anyConfigured: false, accounts: loadAccounts() };
+export async function syncPlatform(platform: string): Promise<SyncResult> {
+  return syncPlatformStats(platform);
+}
+
+export async function getComments(platform?: string): Promise<any[]> {
+  if (platform) {
+    return fetchPlatformComments(platform);
   }
 
-  const updates = data.updates ?? [];
-  const anyConfigured = data.anyConfigured ?? false;
-  if (!anyConfigured) {
-    return { ok: true, anyConfigured: false, accounts: loadAccounts() };
-  }
-
-  let accounts = loadAccounts();
-  for (const u of updates) {
-    if (!u.configured) continue;
-    accounts = accounts.map((a) =>
-      a.platform === u.platform
-        ? {
-            ...a,
-            followers: u.followers,
-            likes: u.likes,
-            comments: u.comments,
-            shares: u.shares,
-          }
-        : a
-    );
-  }
-  saveAccounts(accounts);
-  return { ok: true, anyConfigured: true, accounts };
+  const platforms = ["instagram", "facebook", "tiktok"];
+  const allComments = await Promise.all(
+    platforms.map((p) => fetchPlatformComments(p))
+  );
+  return allComments.flat().sort((a, b) =>
+    new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
 }

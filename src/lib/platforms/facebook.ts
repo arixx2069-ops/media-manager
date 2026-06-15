@@ -1,135 +1,75 @@
-import type { Platform } from "@prisma/client";
-import type { PlatformCredentials } from "@/lib/oauth/credentials";
-import { metaGraphGet } from "./meta-client";
-import type {
-  PlatformComment,
-  PlatformMetrics,
-  PlatformUser,
-  SocialPlatformAdapter,
-} from "./types";
+import type { PlatformAdapter, PlatformStats, PlatformComment } from "./types";
+import { fetchFacebookPageStats, fetchFacebookPageFeed } from "./meta-client";
 
-type FbPage = {
-  followers_count?: number;
-  fan_count?: number;
-};
+export const facebookAdapter: PlatformAdapter = {
+  name: "facebook",
+  displayName: "Facebook",
 
-type FbFeedItem = {
-  id: string;
-  comments?: { summary?: { total_count?: number } };
-  likes?: { summary?: { total_count?: number } };
-  shares?: { count?: number };
-};
+  async fetchStats(accessToken: string, accountId: string): Promise<PlatformStats> {
+    const stats = await fetchFacebookPageStats(accessToken, accountId);
 
-type FbFeedResponse = {
-  data?: FbFeedItem[];
-};
+    const feed = await fetchFacebookPageFeed(accessToken, accountId, 10);
+    const posts = feed?.data ?? [];
 
-type FbCommentItem = {
-  id: string;
-  message?: string;
-  from?: { name?: string };
-  created_time?: string;
-};
+    const totalLikes = posts.reduce((sum: number, p: any) => {
+      return sum + (p.likes?.summary?.total_count ?? 0);
+    }, 0);
+    const totalComments = posts.reduce((sum: number, p: any) => {
+      return sum + (p.comments?.summary?.total_count ?? 0);
+    }, 0);
+    const totalShares = posts.reduce((sum: number, p: any) => {
+      return sum + (p.shares?.count ?? 0);
+    }, 0);
 
-type FbCommentsResponse = {
-  data?: FbCommentItem[];
-};
+    return {
+      followers: stats.fan_count ?? stats.followers_count ?? 0,
+      likes: totalLikes,
+      comments: totalComments,
+      shares: totalShares,
+    };
+  },
 
-export function createFacebookAdapter(
-  creds?: PlatformCredentials
-): SocialPlatformAdapter {
-  const platform: Platform = "FACEBOOK";
-  const token = () => creds?.meta?.accessToken?.trim();
-  const id = () => creds?.meta?.pageId?.trim();
+  async fetchComments(
+    accessToken: string,
+    accountId: string
+  ): Promise<PlatformComment[]> {
+    const feed = await fetchFacebookPageFeed(accessToken, accountId, 5);
+    const posts = feed?.data ?? [];
 
-  return {
-    platform,
-    isConfigured: () => Boolean(token() && id()),
-
-    async fetchMetrics(): Promise<PlatformMetrics> {
-      const pageId = id();
-      const t = token();
-      if (!pageId || !t) {
-        return { platform, likes: 0, comments: 0, shares: 0, followers: 0 };
-      }
-
-      const page = await metaGraphGet<FbPage>(pageId, t, {
-        fields: "followers_count,fan_count",
-      });
-
-      const feed = await metaGraphGet<FbFeedResponse>(`${pageId}/feed`, t, {
-        fields: "comments.summary(true),likes.summary(true),shares",
-        limit: "25",
-      });
-
-      const posts = feed.data ?? [];
-      const likes = posts.reduce(
-        (sum, p) => sum + (p.likes?.summary?.total_count ?? 0),
-        0
-      );
-      const comments = posts.reduce(
-        (sum, p) => sum + (p.comments?.summary?.total_count ?? 0),
-        0
-      );
-      const shares = posts.reduce((sum, p) => sum + (p.shares?.count ?? 0), 0);
-
-      return {
-        platform,
-        followers: page.followers_count ?? page.fan_count ?? 0,
-        likes,
-        comments,
-        shares,
-      };
-    },
-
-    async fetchComments(limit = 20): Promise<PlatformComment[]> {
-      const pageId = id();
-      const t = token();
-      if (!pageId || !t) return [];
-
-      const feed = await metaGraphGet<FbFeedResponse>(`${pageId}/feed`, t, {
-        fields: "id",
-        limit: "10",
-      });
-
-      const comments: PlatformComment[] = [];
-      for (const post of feed.data ?? []) {
-        if (comments.length >= limit) break;
-        try {
-          const res = await metaGraphGet<FbCommentsResponse>(
-            `${post.id}/comments`,
-            t,
-            { fields: "id,message,from,created_time", limit: String(limit) }
-          );
-          for (const c of res.data ?? []) {
-            if (comments.length >= limit) break;
-            const text = c.message ?? "";
-            const positive = /love|great|thank|amazing|❤/i.test(text);
-            comments.push({
-              externalId: c.id,
-              author: c.from?.name ?? "unknown",
-              text,
-              sentiment: positive ? "positive" : "neutral",
-              isPositive: positive,
-              postedAt: c.created_time
-                ? new Date(c.created_time)
-                : new Date(),
+    const allComments: PlatformComment[] = [];
+    for (const post of posts) {
+      try {
+        const res = await fetch(
+          `https://graph.facebook.com/v22.0/${post.id}/comments?fields=id,message,created_time,from{name,id},like_count&limit=25&access_token=${accessToken}`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          for (const c of data?.data ?? []) {
+            allComments.push({
+              id: c.id,
+              platform: "facebook",
+              username: c.from?.name ?? "unknown",
+              text: c.message ?? "",
+              timestamp: c.created_time ?? new Date().toISOString(),
+              likes: c.like_count ?? 0,
             });
           }
-        } catch {
-          /* skip posts without permission */
         }
+      } catch {
+        // skip failed comment fetches
       }
+    }
+    return allComments;
+  },
 
-      return comments.slice(0, limit);
-    },
-
-    async addUser(user: PlatformUser): Promise<PlatformUser> {
-      return user;
-    },
-
-    async removeUser(): Promise<void> {
-      /* managed via Meta Business Suite */
-    },
-  };
-}
+  async verifyToken(accessToken: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v22.0/me?access_token=${accessToken}`
+      );
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+};

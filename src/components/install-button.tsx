@@ -1,27 +1,30 @@
 "use client";
 
-import { useState } from "react";
-import { Check, Download, X } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Download, Check, X } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import { browserLabel } from "@/lib/browser";
-import { usePwaInstall } from "@/lib/pwa-install";
 
-type Props = {
-  className?: string;
-  variant?: "sidebar" | "page";
-};
+function getBrowser(): string {
+  if (typeof navigator === "undefined") return "other";
+  const ua = navigator.userAgent;
+  if (/Edg\//.test(ua)) return "edge";
+  if (/Firefox\//.test(ua)) return "firefox";
+  if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) return "chrome";
+  if (/Safari\//.test(ua) && !/Chrome\//.test(ua)) return "safari";
+  return "other";
+}
 
-function InstallGuideModal({
+function InstallGuide({
   browser,
   onClose,
 }: {
-  browser: ReturnType<typeof usePwaInstall>["browser"];
+  browser: string;
   onClose: () => void;
 }) {
   const { t } = useLocale();
   const isFirefox = browser === "firefox";
   const isSafari = browser === "safari";
-  const isChromium = browser === "chrome" || browser === "edge";
+  const isChrome = browser === "chrome" || browser === "edge";
 
   return (
     <div
@@ -33,18 +36,30 @@ function InstallGuideModal({
       <div className="w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl border border-[var(--card-border)] bg-[var(--card)] p-6 shadow-xl max-h-[90dvh] overflow-y-auto safe-bottom">
         <div className="flex items-start justify-between gap-3 mb-4">
           <div>
-            <h2 id="install-guide-title" className="text-lg font-semibold">
+            <h2
+              id="install-guide-title"
+              className="text-lg font-semibold"
+            >
               {t.install.guideTitle}
             </h2>
             <p className="text-sm text-[var(--muted)] mt-1">
-              {t.install.guideSubtitle.replace("{browser}", browserLabel(browser))}
+              {t.install.guideSubtitle.replace(
+                "{browser}",
+                {
+                  chrome: "Google Chrome",
+                  firefox: "Mozilla Firefox",
+                  edge: "Microsoft Edge",
+                  safari: "Safari",
+                  other: "your browser",
+                }[browser] || "your browser"
+              )}
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
             className="text-[var(--muted)] hover:text-[var(--foreground)] p-1"
-            aria-label={t.install.guideClose}
+            aria-label="Close"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,23 +72,22 @@ function InstallGuideModal({
             <li>{t.install.firefoxStep3}</li>
           </ol>
         )}
-
-        {isChromium && (
+        {isChrome && (
           <ol className="space-y-3 text-sm text-[var(--muted)] list-decimal list-inside">
             <li>{t.install.chromeStep1}</li>
             <li>{t.install.chromeStep2}</li>
           </ol>
         )}
-
         {isSafari && (
           <ol className="space-y-3 text-sm text-[var(--muted)] list-decimal list-inside">
             <li>{t.install.safariStep1}</li>
             <li>{t.install.safariStep2}</li>
           </ol>
         )}
-
-        {!isFirefox && !isChromium && !isSafari && (
-          <p className="text-sm text-[var(--muted)]">{t.install.genericHint}</p>
+        {!isFirefox && !isChrome && !isSafari && (
+          <p className="text-sm text-[var(--muted)]">
+            {t.install.genericHint}
+          </p>
         )}
 
         <button
@@ -88,16 +102,59 @@ function InstallGuideModal({
   );
 }
 
-export function InstallButton({ className = "", variant = "sidebar" }: Props) {
+export function InstallButton({
+  className = "",
+  variant = "sidebar",
+}: {
+  className?: string;
+  variant?: "sidebar" | "page";
+}) {
   const { t } = useLocale();
-  const {
-    browser,
-    installed,
-    canOneClickInstall,
-    install,
-    showGuide,
-    setShowGuide,
-  } = usePwaInstall();
+  const [browser, setBrowser] = useState("other");
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [installed, setInstalled] = useState(false);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    setBrowser(getBrowser());
+
+    if (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      (window.navigator as any).standalone === true
+    ) {
+      setInstalled(true);
+      return;
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+    };
+
+    const onInstalled = () => {
+      setInstalled(true);
+      setDeferredPrompt(null);
+      setShowGuide(false);
+    };
+
+    window.addEventListener("beforeinstallprompt", handler);
+    window.addEventListener("appinstalled", onInstalled);
+
+    return () => {
+      window.removeEventListener("beforeinstallprompt", handler);
+      window.removeEventListener("appinstalled", onInstalled);
+    };
+  }, []);
+
+  const install = useCallback(async () => {
+    if (!installed && deferredPrompt) {
+      await deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      setDeferredPrompt(null);
+      return;
+    }
+    setShowGuide(true);
+  }, [installed, deferredPrompt]);
 
   if (installed) {
     if (variant === "page") {
@@ -111,24 +168,22 @@ export function InstallButton({ className = "", variant = "sidebar" }: Props) {
     return null;
   }
 
-  const base =
-    variant === "sidebar"
-      ? "btn-primary w-full"
-      : "btn-primary";
-
   return (
     <>
       <button
         type="button"
-        onClick={() => void install()}
-        className={`${base} ${className}`}
+        onClick={install}
+        className={`${variant === "sidebar" ? "btn-primary w-full" : "btn-primary"} ${className}`}
       >
         <Download className="w-4 h-4" />
-        {canOneClickInstall ? t.install.buttonNow : t.install.button}
+        {deferredPrompt ? t.install.buttonNow : t.install.button}
       </button>
 
       {showGuide && (
-        <InstallGuideModal browser={browser} onClose={() => setShowGuide(false)} />
+        <InstallGuide
+          browser={browser}
+          onClose={() => setShowGuide(false)}
+        />
       )}
     </>
   );

@@ -1,6 +1,4 @@
-export type BrowserName = "chrome" | "firefox" | "edge" | "safari" | "other";
-
-export function detectBrowser(): BrowserName {
+export function getBrowser(): string {
   if (typeof navigator === "undefined") return "other";
   const ua = navigator.userAgent;
   if (/Edg\//.test(ua)) return "edge";
@@ -10,21 +8,10 @@ export function detectBrowser(): BrowserName {
   return "other";
 }
 
-export function isStandaloneApp(): boolean {
+export function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
   return (
     window.matchMedia("(display-mode: standalone)").matches ||
-    (window.navigator as Navigator & { standalone?: boolean }).standalone === true
+    (window.navigator as any).standalone === true
   );
-}
-
-export function browserLabel(name: BrowserName): string {
-  const labels: Record<BrowserName, string> = {
-    chrome: "Google Chrome",
-    firefox: "Mozilla Firefox",
-    edge: "Microsoft Edge",
-    safari: "Safari",
-    other: "your browser",
-  };
-  return labels[name];
 }

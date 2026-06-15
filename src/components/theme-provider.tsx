@@ -1,23 +1,17 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-export type Theme = "light" | "dark";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import type { ReactNode } from "react";
 
 const STORAGE_KEY = "aeen-iq-theme";
 
-type ThemeContextValue = {
+type Theme = "light" | "dark";
+
+interface ThemeContextValue {
   theme: Theme;
-  setTheme: (theme: Theme) => void;
+  setTheme: (t: Theme) => void;
   toggleTheme: () => void;
-};
+}
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -27,28 +21,27 @@ function applyTheme(theme: Theme) {
   document.documentElement.style.colorScheme = theme;
 }
 
-export function ThemeProvider({ children }: { children: React.ReactNode }) {
+export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<Theme>("light");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Theme | null;
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "light" || stored === "dark") {
       setThemeState(stored);
       applyTheme(stored);
       return;
     }
-    const prefersLight = window.matchMedia(
-      "(prefers-color-scheme: light)"
-    ).matches;
-    const initial = prefersLight ? "light" : "dark";
-    setThemeState(initial);
-    applyTheme(initial);
+    const prefers = window.matchMedia("(prefers-color-scheme: light)").matches
+      ? "light"
+      : "dark";
+    setThemeState(prefers);
+    applyTheme(prefers);
   }, []);
 
-  const setTheme = useCallback((next: Theme) => {
-    setThemeState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    applyTheme(next);
+  const setTheme = useCallback((t: Theme) => {
+    setThemeState(t);
+    localStorage.setItem(STORAGE_KEY, t);
+    applyTheme(t);
   }, []);
 
   const toggleTheme = useCallback(() => {

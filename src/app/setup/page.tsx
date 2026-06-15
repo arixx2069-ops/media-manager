@@ -1,217 +1,187 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { Check, Copy, ExternalLink, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, X } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import { APP_NAME } from "@/lib/constants";
 
-type SetupStatus = {
+interface SetupStatus {
+  checks: Record<string, boolean>;
+  allReady: boolean;
   demoMode: boolean;
-  hasSitePassword: boolean;
-  hasAuthSecret: boolean;
-  hasAppUrl: boolean;
-  appUrl: string | null;
-  hasMetaAppId: boolean;
-  hasMetaSecret: boolean;
-  hasTikTokKey: boolean;
-  hasTikTokSecret: boolean;
-};
-
-function CopyRow({ label, value }: { label: string; value: string }) {
-  const [copied, setCopied] = useState(false);
-
-  async function copy() {
-    await navigator.clipboard.writeText(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
-  return (
-    <div className="rounded-lg border border-[var(--card-border)] bg-[var(--background)] p-3 space-y-2">
-      <p className="text-xs text-[var(--muted)]">{label}</p>
-      <div className="flex items-start justify-between gap-2">
-        <code className="text-xs break-all text-[var(--foreground)]">{value}</code>
-        <button
-          type="button"
-          onClick={copy}
-          className="shrink-0 inline-flex items-center gap-1 text-xs text-link"
-        >
-          {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-          {copied ? "Copied" : "Copy"}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function StatusRow({ ok, label }: { ok: boolean; label: string }) {
-  return (
-    <li className="flex items-center gap-2 text-sm">
-      {ok ? (
-        <Check className="w-4 h-4 text-[var(--positive)] shrink-0" />
-      ) : (
-        <X className="w-4 h-4 text-red-500 shrink-0" />
-      )}
-      <span className={ok ? "text-[var(--foreground)]" : "text-[var(--muted)]"}>
-        {label}
-      </span>
-    </li>
-  );
 }
 
 export default function SetupPage() {
   const { t } = useLocale();
   const [status, setStatus] = useState<SetupStatus | null>(null);
-  const [origin, setOrigin] = useState("");
 
   useEffect(() => {
-    setOrigin(window.location.origin);
     fetch("/api/setup/status")
       .then((r) => r.json())
       .then(setStatus)
-      .catch(() => setStatus(null));
+      .catch(() => {});
   }, []);
 
-  const siteUrl = status?.appUrl || origin;
-  const metaRedirect = `${siteUrl}/api/oauth/meta/callback`;
-  const tiktokRedirect = `${siteUrl}/api/oauth/tiktok/callback`;
-  const apisReady =
-    status &&
-    !status.demoMode &&
-    status.hasMetaAppId &&
-    status.hasMetaSecret &&
-    status.hasTikTokKey &&
-    status.hasTikTokSecret &&
-    status.hasAppUrl;
+  const checkLabels: Record<string, string> = {
+    sitePassword: t.setup.checkPassword,
+    authSecret: t.setup.checkAuth,
+    appUrl: t.setup.checkAppUrl,
+    demoMode: t.setup.checkDemoOff,
+    metaAppId: t.setup.checkMetaId,
+    metaAppSecret: t.setup.checkMetaSecret,
+    tiktokClientKey: t.setup.checkTikTokKey,
+    tiktokClientSecret: t.setup.checkTikTokSecret,
+  };
 
   return (
-    <div className="page-shell max-w-3xl mx-auto w-full">
-      <header className="mb-8">
-        <h2 className="text-2xl font-semibold">{t.setup.title}</h2>
-        <p className="text-[var(--muted)] mt-1">{t.setup.subtitle}</p>
-      </header>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-semibold">
+          {t.setup.title}
+        </h1>
+        <p className="text-sm text-[var(--muted)] mt-1">
+          {t.setup.subtitle}
+        </p>
+      </div>
 
-      <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-6">
-        <h3 className="text-sm font-medium mb-3">{t.setup.ownerNoteTitle}</h3>
-        <p className="text-sm text-[var(--muted)]">{t.setup.ownerNote}</p>
-      </section>
+      <div className="editorial-card p-4 sm:p-6 space-y-4">
+        <h2 className="font-display text-base font-semibold">
+          {t.setup.statusTitle}
+        </h2>
 
-      {status && (
-        <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-6">
-          <h3 className="text-sm font-medium mb-3">{t.setup.statusTitle}</h3>
-          <ul className="space-y-2">
-            <StatusRow ok={status.hasSitePassword} label={t.setup.checkPassword} />
-            <StatusRow ok={status.hasAuthSecret} label={t.setup.checkAuth} />
-            <StatusRow ok={status.hasAppUrl} label={t.setup.checkAppUrl} />
-            <StatusRow ok={!status.demoMode} label={t.setup.checkDemoOff} />
-            <StatusRow ok={status.hasMetaAppId} label={t.setup.checkMetaId} />
-            <StatusRow ok={status.hasMetaSecret} label={t.setup.checkMetaSecret} />
-            <StatusRow ok={status.hasTikTokKey} label={t.setup.checkTikTokKey} />
-            <StatusRow ok={status.hasTikTokSecret} label={t.setup.checkTikTokSecret} />
-          </ul>
-          {apisReady && (
-            <p className="mt-4 text-sm text-[var(--positive)]">{t.setup.allReady}</p>
-          )}
-        </section>
-      )}
+        {status ? (
+          <div className="space-y-2">
+            {Object.entries(checkLabels).map(([key, label]) => {
+              const ok = key === "demoMode" ? !status.demoMode : status.checks[key];
+              return (
+                <div
+                  key={key}
+                  className="flex items-center gap-2 text-sm"
+                >
+                  {ok ? (
+                    <Check className="w-4 h-4 text-[var(--positive)] shrink-0" />
+                  ) : (
+                    <X className="w-4 h-4 text-red-500 shrink-0" />
+                  )}
+                  <span className={ok ? "" : "text-[var(--muted)]"}>
+                    {label}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-sm text-[var(--muted)]">Loading status...</p>
+        )}
 
-      <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-6 space-y-4">
-        <h3 className="text-sm font-medium">{t.setup.netlifyTitle}</h3>
-        <p className="text-sm text-[var(--muted)]">{t.setup.netlifyHint}</p>
+        {status?.allReady && (
+          <p className="text-sm text-[var(--positive)] font-medium">
+            {t.setup.allReady}
+          </p>
+        )}
+      </div>
+
+      <div className="editorial-card p-4 sm:p-6 space-y-3">
+        <h2 className="font-display text-base font-semibold">
+          {t.setup.netlifyTitle}
+        </h2>
+        <p className="text-xs text-[var(--muted)]">{t.setup.netlifyHint}</p>
+
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-left text-[var(--muted)] border-b border-[var(--card-border)]">
-                <th className="py-2 pr-4 font-medium">{t.setup.colKey}</th>
-                <th className="py-2 font-medium">{t.setup.colValue}</th>
+              <tr className="border-b border-[var(--card-border)]">
+                <th className="text-left py-2 pr-4 font-medium">
+                  {t.setup.colKey}
+                </th>
+                <th className="text-left py-2 font-medium">
+                  {t.setup.colValue}
+                </th>
               </tr>
             </thead>
-            <tbody className="text-[var(--foreground)]">
-              {[
-                ["SITE_PASSWORD", "aeen-iq (or your own password)"],
-                ["AUTH_SECRET", "any long random string you make up"],
-                ["DEMO_MODE", "false"],
-                ["NEXT_PUBLIC_APP_URL", siteUrl || "https://YOUR-SITE.netlify.app"],
-                ["META_APP_ID", "from developers.facebook.com → App ID"],
-                ["META_APP_SECRET", "from developers.facebook.com → App secret"],
-                ["TIKTOK_CLIENT_KEY", "from developers.tiktok.com → Client key"],
-                ["TIKTOK_CLIENT_SECRET", "from developers.tiktok.com → Client secret"],
-              ].map(([key, value]) => (
-                <tr key={key} className="border-b border-[var(--card-border)] last:border-0">
-                  <td className="py-2.5 pr-4 align-top">
-                    <code className="text-xs">{key}</code>
-                  </td>
-                  <td className="py-2.5 text-[var(--muted)] text-xs">{value}</td>
-                </tr>
-              ))}
+            <tbody className="text-[var(--muted)]">
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">SITE_PASSWORD</td>
+                <td className="py-2 text-xs">aeen-iq</td>
+              </tr>
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">AUTH_SECRET</td>
+                <td className="py-2 text-xs">any random string</td>
+              </tr>
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">DEMO_MODE</td>
+                <td className="py-2 text-xs">false</td>
+              </tr>
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">META_APP_ID</td>
+                <td className="py-2 text-xs">from Meta Developer</td>
+              </tr>
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">META_APP_SECRET</td>
+                <td className="py-2 text-xs">from Meta Developer</td>
+              </tr>
+              <tr className="border-b border-[var(--card-border)]">
+                <td className="py-2 pr-4 font-mono text-xs">TIKTOK_CLIENT_KEY</td>
+                <td className="py-2 text-xs">from TikTok Developer</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-mono text-xs">
+                  TIKTOK_CLIENT_SECRET
+                </td>
+                <td className="py-2 text-xs">from TikTok Developer</td>
+              </tr>
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
 
-      <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-6 space-y-3">
-        <h3 className="text-sm font-medium">{t.setup.redirectTitle}</h3>
-        <p className="text-sm text-[var(--muted)]">{t.setup.redirectHint}</p>
-        <CopyRow label="Meta redirect URI" value={metaRedirect} />
-        <CopyRow label="TikTok redirect URI" value={tiktokRedirect} />
-      </section>
+      <div className="editorial-card p-4 sm:p-6 space-y-3">
+        <h2 className="font-display text-base font-semibold">
+          {t.setup.redirectTitle}
+        </h2>
+        <p className="text-xs text-[var(--muted)]">{t.setup.redirectHint}</p>
 
-      <section className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-6 space-y-3">
-        <h3 className="text-sm font-medium">{t.setup.linksTitle}</h3>
-        <ul className="space-y-2 text-sm">
-          <li>
-            <a
-              href="https://developers.facebook.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-link"
-            >
-              Meta for Developers
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://developers.tiktok.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-link"
-            >
-              TikTok for Developers
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </li>
-          <li>
-            <a
-              href="https://app.netlify.com/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-link"
-            >
-              Netlify dashboard
-              <ExternalLink className="w-3.5 h-3.5" />
-            </a>
-          </li>
-        </ul>
-      </section>
+        <div className="space-y-2">
+          <div className="bg-[var(--background)] p-3 rounded-lg">
+            <p className="text-[0.62rem] uppercase text-[var(--muted)] mb-1">
+              Meta OAuth redirect
+            </p>
+            <code className="text-xs break-all font-mono">
+              {typeof window !== "undefined"
+                ? `${window.location.origin}/api/oauth/meta/callback`
+                : "https://your-site.netlify.app/api/oauth/meta/callback"}
+            </code>
+          </div>
+          <div className="bg-[var(--background)] p-3 rounded-lg">
+            <p className="text-[0.62rem] uppercase text-[var(--muted)] mb-1">
+              TikTok OAuth redirect
+            </p>
+            <code className="text-xs break-all font-mono">
+              {typeof window !== "undefined"
+                ? `${window.location.origin}/api/oauth/tiktok/callback`
+                : "https://your-site.netlify.app/api/oauth/tiktok/callback"}
+            </code>
+          </div>
+        </div>
+      </div>
 
-      <section className="editorial-card p-5 mb-6 border-t-2 border-t-[var(--accent)]">
-        <h3 className="text-sm font-medium mb-2">{t.setup.afterTitle}</h3>
-        <ol className="text-sm text-[var(--muted)] space-y-2 list-decimal list-inside">
-          <li>{t.setup.afterStep1}</li>
-          <li>{t.setup.afterStep2}</li>
-          <li>
-            {t.setup.afterStep3.replace("{app}", APP_NAME)}
-          </li>
-        </ol>
-      </section>
-
-      <p className="text-sm text-[var(--muted)]">
-        <Link href="/accounts" className="text-link">
-          {t.setup.goAccounts}
-        </Link>
-      </p>
+      <div className="flex gap-3">
+        <a
+          href="https://developers.facebook.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-secondary text-xs flex-1"
+        >
+          Meta Developers
+        </a>
+        <a
+          href="https://developers.tiktok.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="btn-secondary text-xs flex-1"
+        >
+          TikTok Developers
+        </a>
+      </div>
     </div>
   );
 }

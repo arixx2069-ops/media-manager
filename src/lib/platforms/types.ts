@@ -1,34 +1,38 @@
-import type { Platform } from "@prisma/client";
+export type Platform = "instagram" | "facebook" | "tiktok" | "telegram";
 
-export type PlatformMetrics = {
-  platform: Platform;
+export interface PlatformStats {
   likes: number;
-  comments: number;
-  shares: number;
   followers: number;
-};
+  comments: number;
+  shares?: number;
+  views?: number;
+}
 
-export type PlatformComment = {
-  externalId: string;
-  author: string;
-  text: string;
-  sentiment: "positive" | "neutral" | "negative";
-  isPositive: boolean;
-  postedAt: Date;
-};
-
-export type PlatformUser = {
-  externalId?: string;
+export interface PlatformAccount {
+  id: string;
+  platform: Platform;
   username: string;
   displayName?: string;
-  role?: string;
-};
+  profilePicture?: string;
+  stats: PlatformStats;
+  connected: boolean;
+  lastSynced?: string;
+}
 
-export interface SocialPlatformAdapter {
+export interface PlatformComment {
+  id: string;
   platform: Platform;
-  isConfigured(): boolean;
-  fetchMetrics(): Promise<PlatformMetrics>;
-  fetchComments(limit?: number): Promise<PlatformComment[]>;
-  addUser(user: PlatformUser): Promise<PlatformUser>;
-  removeUser(username: string): Promise<void>;
+  username: string;
+  text: string;
+  timestamp: string;
+  likes?: number;
+  profilePicture?: string;
+}
+
+export interface PlatformAdapter {
+  name: Platform;
+  displayName: string;
+  fetchStats(accessToken: string, accountId: string): Promise<PlatformStats>;
+  fetchComments(accessToken: string, accountId: string): Promise<PlatformComment[]>;
+  verifyToken(accessToken: string): Promise<boolean>;
 }

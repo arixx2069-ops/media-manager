@@ -4,24 +4,26 @@ import { useEffect } from "react";
 
 export function PwaRegister() {
   useEffect(() => {
-    if (!("serviceWorker" in navigator)) return;
-
-    navigator.serviceWorker
-      .register("/sw.js")
-      .then((registration) => {
-        registration.addEventListener("updatefound", () => {
-          const worker = registration.installing;
-          if (!worker) return;
-          worker.addEventListener("statechange", () => {
-            if (worker.state === "activated" && navigator.serviceWorker.controller) {
-              window.location.reload();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker
+        .register("/sw.js")
+        .then((reg) => {
+          reg.addEventListener("updatefound", () => {
+            const installing = reg.installing;
+            if (installing) {
+              installing.addEventListener("statechange", () => {
+                if (
+                  installing.state === "activated" &&
+                  navigator.serviceWorker.controller
+                ) {
+                  window.location.reload();
+                }
+              });
             }
           });
-        });
-      })
-      .catch(() => {
-        /* registration optional in dev */
-      });
+        })
+        .catch(() => {});
+    }
   }, []);
 
   return null;

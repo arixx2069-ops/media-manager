@@ -1,111 +1,106 @@
-import { addAccount, loadAccounts, type ConnectedAccount } from "@/lib/accounts";
-import { syncAccountsFromApis } from "@/lib/api-sync";
+import { getMetaCredentials, getTikTokCredentials, isDemoMode } from "./credentials";
+import { getPlatformAdapter } from "../platforms";
 
-export type OAuthStatus = {
-  meta: {
-    connected: boolean;
-    instagram: { username: string; accountId: string } | null;
-    facebook: { name: string; pageId: string } | null;
+export interface SyncResult {
+  platform: string;
+  success: boolean;
+  stats?: {
+    followers: number;
+    likes: number;
+    comments: number;
+    shares?: number;
+    views?: number;
   };
-  tiktok: {
-    connected: boolean;
-    username: string | null;
-    displayName: string | null;
-  };
-};
-
-export async function fetchOAuthStatus(): Promise<OAuthStatus> {
-  const res = await fetch("/api/oauth/status");
-  if (!res.ok) {
-    return {
-      meta: { connected: false, instagram: null, facebook: null },
-      tiktok: { connected: false, username: null, displayName: null },
-    };
-  }
-  return res.json() as Promise<OAuthStatus>;
+  error?: string;
 }
 
-export function ensureAccountsFromOAuth(status: OAuthStatus): ConnectedAccount[] {
-  let accounts = loadAccounts();
+export async function syncPlatformStats(
+  platform: string,
+  accountIdOverride?: string
+): Promise<SyncResult> {
+  const demo = isDemoMode();
 
-  if (status.meta.instagram?.username) {
-    const username = status.meta.instagram.username.replace(/^@/, "");
-    if (
-      !accounts.some(
-        (a) => a.platform === "INSTAGRAM" && a.username === username
-      )
-    ) {
-      accounts = addAccount({
-        platform: "INSTAGRAM",
-        username,
-        displayName: username,
-        followers: 0,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-      });
+  try {
+    const adapter = getPlatformAdapter(platform, demo);
+    if (!adapter) {
+      return { platform, success: false, error: `Unknown platform: ${platform}` };
     }
-  }
 
-  if (status.meta.facebook?.pageId) {
-    const username =
-      status.meta.facebook.name
-        ?.toLowerCase()
-        .replace(/[^a-z0-9]/g, "")
-        .slice(0, 30) || status.meta.facebook.pageId;
-    if (
-      !accounts.some(
-        (a) => a.platform === "FACEBOOK" && a.username === username
-      )
-    ) {
-      accounts = addAccount({
-        platform: "FACEBOOK",
-        username,
-        displayName: status.meta.facebook.name ?? username,
-        followers: 0,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-      });
+    if (demo) {
+      const stats = await adapter.fetchStats("", "");
+      return { platform, success: true, stats };
     }
-  }
 
-  if (status.tiktok.username) {
-    const username = status.tiktok.username.replace(/^@/, "");
-    if (
-      !accounts.some((a) => a.platform === "TIKTOK" && a.username === username)
-    ) {
-      accounts = addAccount({
-        platform: "TIKTOK",
-        username,
-        displayName: status.tiktok.displayName ?? username,
-        followers: 0,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-      });
+    let accessToken = "";
+    let accountId = accountIdOverride ?? "";
+
+    if (platform === "instagram" || platform === "facebook") {
+      const meta = getMetaCredentials();
+      if (!meta) {
+        return { platform, success: false, error: "Meta credentials not configured. Set META_APP_ID and META_APP_SECRET in .env" };
+      }
+      accessToken = meta.accessToken;
+      if (!accountId) {
+        accountId = platform === "instagram"
+          ? (meta.instagramAccountId ?? "")
+          : (meta.facebookPageId ?? "");
+      }
+    } else if (platform === "tiktok") {
+      const tiktok = getTikTokCredentials();
+      if (!tiktok) {
+        return { platform, success: false, error: "TikTok credentials not configured. Set TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET in .env" };
+      }
+      accessToken = tiktok.accessToken;
     }
-  }
 
-  return accounts;
+    if (!accessToken) {
+      return { platform, success: false, error: `No access token for ${platform}` };
+    }
+
+    const stats = await adapter.fetchStats(accessToken, accountId);
+    return { platform, success: true, stats };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : "Unknown error";
+    return { platform, success: false, error: message };
+  }
 }
 
-/** After OAuth connect or on dashboard load: ensure accounts exist, then pull live stats. */
-export async function connectAndSync(): Promise<{
-  accounts: ConnectedAccount[];
-  anyConfigured: boolean;
-  status: OAuthStatus;
-}> {
-  const status = await fetchOAuthStatus();
-  ensureAccountsFromOAuth(status);
-  const result = await syncAccountsFromApis();
-  return { ...result, status };
+export async function syncAllPlatforms(): Promise<SyncResult[]> {
+  const platforms = ["instagram", "facebook", "tiktok"];
+  const results = await Promise.all(
+    platforms.map((p) => syncPlatformStats(p))
+  );
+  return results;
 }
 
-export async function disconnectOAuth(platform: "meta" | "tiktok"): Promise<void> {
-  await fetch("/api/oauth/disconnect", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ platform }),
-  });
+export async function fetchPlatformComments(
+  platform: string
+): Promise<any[]> {
+  const demo = isDemoMode();
+
+  try {
+    const adapter = getPlatformAdapter(platform, demo);
+    if (!adapter) return [];
+
+    if (demo) {
+      return adapter.fetchComments("", "");
+    }
+
+    let accessToken = "";
+
+    if (platform === "instagram" || platform === "facebook") {
+      const meta = getMetaCredentials();
+      if (!meta) return [];
+      accessToken = meta.accessToken;
+    } else if (platform === "tiktok") {
+      const tiktok = getTikTokCredentials();
+      if (!tiktok) return [];
+      accessToken = tiktok.accessToken;
+    }
+
+    if (!accessToken) return [];
+    return adapter.fetchComments(accessToken, "");
+  } catch {
+    return [];
+  }
 }

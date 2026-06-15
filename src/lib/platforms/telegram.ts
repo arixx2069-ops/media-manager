@@ -1,43 +1,40 @@
-import type { Platform } from "@prisma/client";
-import type {
-  SocialPlatformAdapter,
-  PlatformMetrics,
-  PlatformComment,
-  PlatformUser,
-} from "./types";
+import type { PlatformAdapter, PlatformStats, PlatformComment } from "./types";
 
-const TELEGRAM_API = "https://api.telegram.org/bot";
+export const telegramAdapter: PlatformAdapter = {
+  name: "telegram",
+  displayName: "Telegram",
 
-export function createTelegramAdapter(): SocialPlatformAdapter {
-  const platform: Platform = "TELEGRAM";
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-
-  return {
-    platform,
-    isConfigured: () => Boolean(token),
-    async fetchMetrics(): Promise<PlatformMetrics> {
-      if (!token) {
-        throw new Error("TELEGRAM_BOT_TOKEN not configured");
+  async fetchStats(accessToken: string, accountId: string): Promise<PlatformStats> {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${accessToken}/getChatMembersCount?chat_id=@${accountId}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        return {
+          followers: data.result ?? 0,
+          likes: 0,
+          comments: 0,
+        };
       }
-      const res = await fetch(`${TELEGRAM_API}${token}/getMe`);
-      const data = (await res.json()) as { ok: boolean };
-      if (!data.ok) {
-        throw new Error("Telegram API error");
-      }
-      return {
-        platform,
-        likes: 0,
-        comments: 0,
-        shares: 0,
-        followers: 0,
-      };
-    },
-    async fetchComments(): Promise<PlatformComment[]> {
-      return [];
-    },
-    async addUser(user: PlatformUser): Promise<PlatformUser> {
-      return user;
-    },
-    async removeUser(): Promise<void> {},
-  };
-}
+    } catch {
+      // fall through
+    }
+    return { followers: 0, likes: 0, comments: 0 };
+  },
+
+  async fetchComments(): Promise<PlatformComment[]> {
+    return [];
+  },
+
+  async verifyToken(accessToken: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `https://api.telegram.org/bot${accessToken}/getMe`
+      );
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+};

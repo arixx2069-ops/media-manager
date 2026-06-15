@@ -1,15 +1,22 @@
 import { NextResponse } from "next/server";
 
 export async function GET() {
+  const checks = {
+    sitePassword: !!process.env.SITE_PASSWORD,
+    authSecret: !!process.env.AUTH_SECRET,
+    appUrl: !!process.env.NEXT_PUBLIC_APP_URL,
+    demoMode: process.env.DEMO_MODE === "false",
+    metaAppId: !!process.env.META_APP_ID,
+    metaAppSecret: !!process.env.META_APP_SECRET,
+    tiktokClientKey: !!process.env.TIKTOK_CLIENT_KEY,
+    tiktokClientSecret: !!process.env.TIKTOK_CLIENT_SECRET,
+  };
+
+  const allReady = Object.values(checks).every(Boolean);
+
   return NextResponse.json({
+    checks,
+    allReady,
     demoMode: process.env.DEMO_MODE !== "false",
-    hasSitePassword: Boolean(process.env.SITE_PASSWORD?.trim()),
-    hasAuthSecret: Boolean(process.env.AUTH_SECRET?.trim()),
-    hasAppUrl: Boolean(process.env.NEXT_PUBLIC_APP_URL?.trim()),
-    appUrl: process.env.NEXT_PUBLIC_APP_URL?.trim() || null,
-    hasMetaAppId: Boolean(process.env.META_APP_ID?.trim()),
-    hasMetaSecret: Boolean(process.env.META_APP_SECRET?.trim()),
-    hasTikTokKey: Boolean(process.env.TIKTOK_CLIENT_KEY?.trim()),
-    hasTikTokSecret: Boolean(process.env.TIKTOK_CLIENT_SECRET?.trim()),
   });
 }

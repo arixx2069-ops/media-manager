@@ -1,70 +1,65 @@
-import type { NextRequest } from "next/server";
-import {
-  META_CONN_COOKIE,
-  readSignedCookie,
-  TIKTOK_CONN_COOKIE,
-} from "./cookies";
-
-export type MetaConnection = {
+export interface MetaCredentials {
   accessToken: string;
-  pageId?: string;
-  pageName?: string;
-  igAccountId?: string;
-  igUsername?: string;
-};
+  instagramAccountId?: string;
+  facebookPageId?: string;
+  expiresAt?: number;
+}
 
-export type TikTokConnection = {
+export interface TikTokCredentials {
   accessToken: string;
-  openId?: string;
-  username?: string;
-  displayName?: string;
-};
-
-export type PlatformCredentials = {
-  meta?: MetaConnection;
-  tiktok?: TikTokConnection;
-};
-
-export function getAppOrigin(request?: NextRequest | Request): string {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
-  if (request) return new URL(request.url).origin;
-  return "http://localhost:3000";
+  openId: string;
+  expiresAt?: number;
 }
 
-export async function resolveCredentials(
-  request?: NextRequest | Request
-): Promise<PlatformCredentials> {
-  const metaCookie = await readSignedCookie<MetaConnection>(META_CONN_COOKIE);
-  const tiktokCookie = await readSignedCookie<TikTokConnection>(TIKTOK_CONN_COOKIE);
+export function getMetaCredentials(): MetaCredentials | null {
+  const appId = process.env.META_APP_ID;
+  const appSecret = process.env.META_APP_SECRET;
+  const accessToken = process.env.META_ACCESS_TOKEN;
+  const igId = process.env.META_INSTAGRAM_ACCOUNT_ID;
+  const fbId = process.env.META_FACEBOOK_PAGE_ID;
 
-  const meta: MetaConnection | undefined =
-    process.env.META_ACCESS_TOKEN?.trim()
-      ? {
-          accessToken: process.env.META_ACCESS_TOKEN.trim(),
-          igAccountId: process.env.META_INSTAGRAM_ACCOUNT_ID?.trim(),
-          pageId: process.env.META_FACEBOOK_PAGE_ID?.trim(),
-        }
-      : metaCookie ?? undefined;
+  if (!accessToken) return null;
 
-  const tiktok: TikTokConnection | undefined =
-    process.env.TIKTOK_ACCESS_TOKEN?.trim()
-      ? {
-          accessToken: process.env.TIKTOK_ACCESS_TOKEN.trim(),
-        }
-      : tiktokCookie ?? undefined;
-
-  void request;
-  return { meta, tiktok };
+  return {
+    accessToken,
+    instagramAccountId: igId,
+    facebookPageId: fbId,
+  };
 }
 
-export function isMetaConfigured(creds: PlatformCredentials): boolean {
-  return Boolean(
-    creds.meta?.accessToken &&
-      (creds.meta.igAccountId || creds.meta.pageId)
-  );
+export function getTikTokCredentials(): TikTokCredentials | null {
+  const accessToken = process.env.TIKTOK_ACCESS_TOKEN;
+  const openId = process.env.TIKTOK_OPEN_ID;
+
+  if (!accessToken) return null;
+
+  return {
+    accessToken,
+    openId: openId ?? "",
+  };
 }
 
-export function isTikTokConfigured(creds: PlatformCredentials): boolean {
-  return Boolean(creds.tiktok?.accessToken);
+export function getOAuthCredentials() {
+  return {
+    meta: {
+      appId: process.env.META_APP_ID ?? "",
+      appSecret: process.env.META_APP_SECRET ?? "",
+    },
+    tiktok: {
+      clientKey: process.env.TIKTOK_CLIENT_KEY ?? "",
+      clientSecret: process.env.TIKTOK_CLIENT_SECRET ?? "",
+    },
+  };
+}
+
+export function isDemoMode(): boolean {
+  return process.env.DEMO_MODE === "true";
+}
+
+export function hasMetaCredentials(): boolean {
+  return !!(process.env.META_APP_ID && process.env.META_APP_SECRET);
+}
+
+export function hasTikTokCredentials(): boolean {
+  return !!(process.env.TIKTOK_CLIENT_KEY && process.env.TIKTOK_CLIENT_SECRET);
 }

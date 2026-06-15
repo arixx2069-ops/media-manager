@@ -1,43 +1,34 @@
-export type AdvisorChatMessage = {
+const STORAGE_KEY = "aeen-iq-advisor-chat";
+
+export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
-};
+}
 
-export type SavedAdvisorChat = {
-  messages: AdvisorChatMessage[];
-  source: string | null;
-  savedAt: string;
-};
-
-export const ADVISOR_CHAT_KEY = "aeen-iq-advisor-chat";
-
-export function loadAdvisorChat(): SavedAdvisorChat | null {
-  if (typeof window === "undefined") return null;
+export function loadChat(): ChatMessage[] {
+  if (typeof window === "undefined") return [];
   try {
-    const raw = localStorage.getItem(ADVISOR_CHAT_KEY);
-    if (!raw) return null;
-    const data = JSON.parse(raw) as SavedAdvisorChat;
-    if (!Array.isArray(data.messages)) return null;
-    return data;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function saveAdvisorChat(
-  messages: AdvisorChatMessage[],
-  source: string | null
-): void {
+export function saveChat(messages: ChatMessage[]): void {
   if (typeof window === "undefined") return;
-  const payload: SavedAdvisorChat = {
-    messages,
-    source,
-    savedAt: new Date().toISOString(),
-  };
-  localStorage.setItem(ADVISOR_CHAT_KEY, JSON.stringify(payload));
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+  } catch {
+    // ignore
+  }
 }
 
-export function clearAdvisorChat(): void {
+export function clearChat(): void {
   if (typeof window === "undefined") return;
-  localStorage.removeItem(ADVISOR_CHAT_KEY);
+  try {
+    localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // ignore
+  }
 }

@@ -7,84 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Platform {
-  INSTAGRAM
-  TIKTOK
-  TELEGRAM
-  TWITTER
-  YOUTUBE
-  FACEBOOK
-  LINKEDIN
-}
-
-enum ConnectionStatus {
-  CONNECTED
-  DISCONNECTED
-  ERROR
-}
-
-model PlatformConnection {
-  id           String           @id @default(cuid())
-  platform     Platform         @unique
-  accountName  String
-  accountId    String?
-  status       ConnectionStatus @default(DISCONNECTED)
-  accessToken  String?
-  metadata     String?
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
-}
-
-model SocialMetric {
-  id         String   @id @default(cuid())
-  platform   Platform
-  likes      Int      @default(0)
-  comments   Int      @default(0)
-  shares     Int      @default(0)
-  followers  Int      @default(0)
-  recordedAt DateTime @default(now())
+model Account {
+  id          String   @id @default(cuid())
+  platform    String
+  username    String
+  displayName String?
+  followers   Int      @default(0)
+  likes       Int      @default(0)
+  comments    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model Comment {
-  id         String   @id @default(cuid())
-  platform   Platform
-  externalId String
-  author     String
-  text       String
-  sentiment  String   @default("neutral")
-  isPositive Boolean  @default(false)
-  postedAt   DateTime
-  createdAt  DateTime @default(now())
-
-  @@unique([platform, externalId])
-}
-
-model ManagedUser {
-  id         String   @id @default(cuid())
-  platform   Platform
-  username   String
-  displayName String?
-  role       String   @default("member")
-  isActive   Boolean  @default(true)
-  externalId String?
-  addedAt    DateTime @default(now())
-
-  @@unique([platform, username])
-}
-
-model AiRecommendation {
   id        String   @id @default(cuid())
-  title     String
-  content   String
-  priority  String   @default("medium")
+  platform  String
+  username  String
+  text      String
+  timestamp DateTime @default(now())
+  likes     Int      @default(0)
   createdAt DateTime @default(now())
 }
 
-model AccessControl {
+model SyncLog {
   id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  status    String   @default("pending") // pending, approved, denied
+  platform  String
+  success   Boolean
+  message   String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

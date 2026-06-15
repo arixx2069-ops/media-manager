@@ -1,52 +1,46 @@
-import type { Metadata, Viewport } from "next";
-import { Fraunces, Noto_Sans_Arabic, Space_Mono } from "next/font/google";
+import type { Metadata } from "next";
+import { Space_Mono, Fraunces, Noto_Sans_Arabic } from "next/font/google";
 import "./globals.css";
-import { AppShell } from "@/components/app-shell";
+import { ThemeProvider } from "@/components/theme-provider";
 import { LocaleProvider } from "@/components/locale-provider";
 import { PwaRegister } from "@/components/pwa-register";
-import { ThemeProvider } from "@/components/theme-provider";
-import { APP_DESCRIPTION, APP_NAME, APP_SHORT_NAME } from "@/lib/constants";
+import { AppShell } from "@/components/app-shell";
 
 const spaceMono = Space_Mono({
-  variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "700"],
+  variable: "--font-mono",
+  display: "swap",
 });
 
 const fraunces = Fraunces({
-  variable: "--font-display",
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  variable: "--font-display",
+  display: "swap",
 });
 
 const notoArabic = Noto_Sans_Arabic({
-  variable: "--font-arabic",
   subsets: ["arabic"],
-  weight: ["400", "500", "600", "700"],
+  variable: "--font-arabic",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: APP_NAME,
-  description: APP_DESCRIPTION,
+  title: "SMM Social Media Manager",
+  description: "Social media tracker and AI advisor — Instagram, Facebook, and TikTok.",
+  applicationName: "SMM",
   manifest: "/manifest.json",
-  applicationName: APP_SHORT_NAME,
-  icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
-    apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
+  formatDetection: {
+    telephone: false,
   },
   appleWebApp: {
-    capable: true,
+    title: "SMM",
     statusBarStyle: "black-translucent",
-    title: APP_SHORT_NAME,
   },
-  formatDetection: { telephone: false },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#f4efe6",
-  width: "device-width",
-  initialScale: 1,
-  viewportFit: "cover",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -59,8 +53,7 @@ export default function RootLayout({
       <body
         className={`${spaceMono.variable} ${fraunces.variable} ${notoArabic.variable} antialiased min-h-screen`}
         style={{
-          fontFamily:
-            "var(--font-mono), var(--font-arabic), ui-monospace, monospace",
+          fontFamily: "var(--font-mono), var(--font-arabic), ui-monospace, monospace",
         }}
       >
         <ThemeProvider>

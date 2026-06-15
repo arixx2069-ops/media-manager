@@ -1,117 +1,111 @@
-import type { Platform } from "@prisma/client";
-import type { PlatformCredentials } from "@/lib/oauth/credentials";
-import type {
-  PlatformComment,
-  PlatformMetrics,
-  PlatformUser,
-  SocialPlatformAdapter,
-} from "./types";
+import type { PlatformAdapter, PlatformStats, PlatformComment } from "./types";
 
-const TIKTOK_USER_INFO = "https://open.tiktokapis.com/v2/user/info/";
-const TIKTOK_VIDEO_LIST = "https://open.tiktokapis.com/v2/video/list/";
+const TIKTOK_API_URL = "https://open.tiktokapis.com/v2";
 
-type TikTokUserData = {
-  follower_count?: number;
-  likes_count?: number;
-  video_count?: number;
-};
+export const tiktokAdapter: PlatformAdapter = {
+  name: "tiktok",
+  displayName: "TikTok",
 
-type TikTokUserResponse = {
-  data?: { user?: TikTokUserData };
-  error?: { message?: string };
-};
+  async fetchStats(accessToken: string, accountId: string): Promise<PlatformStats> {
+    const fields = "follower_count,likes_count,comment_count,video_count";
+    const res = await fetch(
+      `${TIKTOK_API_URL}/user/info/?fields=${fields}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
 
-type TikTokVideo = {
-  id: string;
-  comment_count?: number;
-  like_count?: number;
-  share_count?: number;
-};
-
-type TikTokVideoResponse = {
-  data?: { videos?: TikTokVideo[] };
-  error?: { message?: string };
-};
-
-export function createTikTokAdapter(
-  creds?: PlatformCredentials
-): SocialPlatformAdapter {
-  const platform: Platform = "TIKTOK";
-  const token = () => creds?.tiktok?.accessToken?.trim();
-
-  async function tiktokPost<T>(url: string, body: object): Promise<T> {
-    const t = token();
-    if (!t) throw new Error("TikTok access token is not set");
-
-    const res = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${t}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-      next: { revalidate: 300 },
-    });
-
-    const data = (await res.json()) as T & { error?: { message?: string } };
-    if (!res.ok || data.error?.message) {
-      throw new Error(data.error?.message ?? `TikTok API error (${res.status})`);
+    if (!res.ok) {
+      throw new Error("Failed to fetch TikTok stats");
     }
-    return data;
-  }
 
-  return {
-    platform,
-    isConfigured: () => Boolean(token()),
+    const data = await res.json();
+    const user = data?.data?.user;
 
-    async fetchMetrics(): Promise<PlatformMetrics> {
-      if (!token()) {
-        return { platform, likes: 0, comments: 0, shares: 0, followers: 0 };
-      }
+    return {
+      followers: Number(user?.follower_count ?? 0),
+      likes: Number(user?.likes_count ?? 0),
+      comments: Number(user?.comment_count ?? 0),
+      views: Number(user?.video_count ?? 0),
+    };
+  },
 
-      const userRes = await tiktokPost<TikTokUserResponse>(TIKTOK_USER_INFO, {
-        fields: ["follower_count", "likes_count", "video_count"],
-      });
+  async fetchComments(
+    accessToken: string,
+    accountId: string
+  ): Promise<PlatformComment[]> {
+    try {
+      const videosRes = await fetch(
+        `${TIKTOK_API_URL}/video/list/?fields=id,title,create_time&max_count=10`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        }
+      );
 
-      const user = userRes.data?.user;
-      let comments = 0;
-      let shares = 0;
+      if (!videosRes.ok) return [];
 
-      try {
-        const videoRes = await tiktokPost<TikTokVideoResponse>(
-          TIKTOK_VIDEO_LIST,
-          {
-            max_count: 20,
-            fields: ["id", "comment_count", "like_count", "share_count"],
+      const videosData = await videosRes.json();
+      const videos = videosData?.data?.videos ?? [];
+
+      const allComments: PlatformComment[] = [];
+      for (const video of videos.slice(0, 5)) {
+        try {
+          const comRes = await fetch(
+            `${TIKTOK_API_URL}/video/comment/list/?fields=id,text,create_time,user_display_name,like_count&max_count=20`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ video_id: video.id }),
+            }
+          );
+
+          if (comRes.ok) {
+            const comData = await comRes.json();
+            for (const c of comData?.data?.comments ?? []) {
+              allComments.push({
+                id: c.id,
+                platform: "tiktok",
+                username: c.user_display_name ?? "unknown",
+                text: c.text ?? "",
+                timestamp: c.create_time ?? new Date().toISOString(),
+                likes: c.like_count ?? 0,
+              });
+            }
           }
-        );
-        const videos = videoRes.data?.videos ?? [];
-        comments = videos.reduce((s, v) => s + (v.comment_count ?? 0), 0);
-        shares = videos.reduce((s, v) => s + (v.share_count ?? 0), 0);
-      } catch {
-        /* video.list may require extra scopes */
+        } catch {
+          // skip failed comment fetches
+        }
       }
 
-      return {
-        platform,
-        followers: user?.follower_count ?? 0,
-        likes: user?.likes_count ?? 0,
-        comments,
-        shares,
-      };
-    },
-
-    async fetchComments(limit = 20): Promise<PlatformComment[]> {
-      void limit;
+      return allComments;
+    } catch {
       return [];
-    },
+    }
+  },
 
-    async addUser(user: PlatformUser): Promise<PlatformUser> {
-      return user;
-    },
-
-    async removeUser(): Promise<void> {
-      /* managed via TikTok Developer Portal */
-    },
-  };
-}
+  async verifyToken(accessToken: string): Promise<boolean> {
+    try {
+      const res = await fetch(
+        `${TIKTOK_API_URL}/user/info/?fields=display_name`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      return res.ok;
+    } catch {
+      return false;
+    }
+  },
+};

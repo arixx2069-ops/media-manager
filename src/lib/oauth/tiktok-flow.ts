@@ -1,93 +1,62 @@
-import { getAppOrigin } from "./credentials";
-import type { TikTokConnection } from "./credentials";
+import { getOAuthCredentials } from "./credentials";
 
-const TIKTOK_AUTH = "https://www.tiktok.com/v2/auth/authorize/";
-const TIKTOK_TOKEN = "https://open.tiktokapis.com/v2/oauth/token/";
-const TIKTOK_USER = "https://open.tiktokapis.com/v2/user/info/";
+const TIKTOK_AUTH_URL = "https://www.tiktok.com/v2/auth/authorize";
 
-const TIKTOK_SCOPES = [
-  "user.info.basic",
-  "user.info.stats",
-  "video.list",
-].join(",");
+export function buildTikTokAuthUrl(
+  request: Request,
+  state: string
+): string {
+  const { tiktok } = getOAuthCredentials();
+  const { origin } = new URL(request.url);
 
-export function tiktokRedirectUri(request: Request): string {
-  return `${getAppOrigin(request)}/api/oauth/tiktok/callback`;
-}
+  const params = new URLSearchParams({
+    client_key: tiktok.clientKey,
+    redirect_uri: `${origin}/api/oauth/tiktok/callback`,
+    state,
+    scope: [
+      "user.info.basic",
+      "user.info.stats",
+      "video.list",
+    ].join(","),
+    response_type: "code",
+  });
 
-export function buildTikTokAuthUrl(request: Request, state: string): string {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
-  if (!clientKey) throw new Error("TIKTOK_CLIENT_KEY is not set");
-
-  const url = new URL(TIKTOK_AUTH);
-  url.searchParams.set("client_key", clientKey);
-  url.searchParams.set("scope", TIKTOK_SCOPES);
-  url.searchParams.set("response_type", "code");
-  url.searchParams.set("redirect_uri", tiktokRedirectUri(request));
-  url.searchParams.set("state", state);
-  return url.toString();
+  return `${TIKTOK_AUTH_URL}?${params.toString()}`;
 }
 
 export async function exchangeTikTokCode(
   request: Request,
   code: string
-): Promise<TikTokConnection> {
-  const clientKey = process.env.TIKTOK_CLIENT_KEY?.trim();
-  const clientSecret = process.env.TIKTOK_CLIENT_SECRET?.trim();
-  if (!clientKey || !clientSecret) {
-    throw new Error("TIKTOK_CLIENT_KEY and TIKTOK_CLIENT_SECRET are required");
+): Promise<{ accessToken: string; openId: string }> {
+  const { tiktok } = getOAuthCredentials();
+  const { origin } = new URL(request.url);
+
+  const tokenRes = await fetch(
+    "https://open.tiktokapis.com/v2/oauth/token/",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Cache-Control": "no-cache",
+      },
+      body: new URLSearchParams({
+        client_key: tiktok.clientKey,
+        client_secret: tiktok.clientSecret,
+        code,
+        grant_type: "authorization_code",
+        redirect_uri: `${origin}/api/oauth/tiktok/callback`,
+      }),
+    }
+  );
+
+  if (!tokenRes.ok) {
+    const err = await tokenRes.json().catch(() => ({}));
+    throw new Error(err?.error_description ?? "Failed to exchange TikTok code");
   }
 
-  const body = new URLSearchParams({
-    client_key: clientKey,
-    client_secret: clientSecret,
-    code,
-    grant_type: "authorization_code",
-    redirect_uri: tiktokRedirectUri(request),
-  });
-
-  const tokenRes = await fetch(TIKTOK_TOKEN, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
-
-  const tokenData = (await tokenRes.json()) as {
-    access_token?: string;
-    open_id?: string;
-    error?: string;
-    error_description?: string;
-  };
-
-  if (!tokenRes.ok || !tokenData.access_token) {
-    throw new Error(
-      tokenData.error_description ?? tokenData.error ?? "TikTok token exchange failed"
-    );
-  }
-
-  const userRes = await fetch(TIKTOK_USER, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${tokenData.access_token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      fields: ["open_id", "username", "display_name"],
-    }),
-  });
-
-  const userData = (await userRes.json()) as {
-    data?: {
-      user?: { username?: string; display_name?: string; open_id?: string };
-    };
-  };
-
-  const user = userData.data?.user;
-
+  const data = await tokenRes.json();
   return {
-    accessToken: tokenData.access_token,
-    openId: tokenData.open_id ?? user?.open_id,
-    username: user?.username,
-    displayName: user?.display_name,
+    accessToken: data.access_token,
+    openId: data.open_id,
   };
 }

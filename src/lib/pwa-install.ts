@@ -1,62 +1,31 @@
-"use client";
+let deferredPrompt: Event | null = null;
 
-import { useCallback, useEffect, useState } from "react";
-import { detectBrowser, isStandaloneApp, type BrowserName } from "@/lib/browser";
+export function registerInstallPrompt() {
+  if (typeof window === "undefined") return;
 
-export type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
 
-export function usePwaInstall() {
-  const [browser, setBrowser] = useState<BrowserName>("other");
-  const [prompt, setPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const [showGuide, setShowGuide] = useState(false);
+  window.addEventListener("appinstalled", () => {
+    deferredPrompt = null;
+  });
+}
 
-  useEffect(() => {
-    setBrowser(detectBrowser());
-    if (isStandaloneApp()) {
-      setInstalled(true);
-      return;
-    }
+export function getDeferredPrompt(): Event | null {
+  return deferredPrompt;
+}
 
-    const onInstallable = (e: Event) => {
-      e.preventDefault();
-      setPrompt(e as BeforeInstallPromptEvent);
-    };
+export async function promptInstall(): Promise<boolean> {
+  if (!deferredPrompt) return false;
 
-    const onInstalled = () => {
-      setInstalled(true);
-      setPrompt(null);
-      setShowGuide(false);
-    };
-
-    window.addEventListener("beforeinstallprompt", onInstallable);
-    window.addEventListener("appinstalled", onInstalled);
-    return () => {
-      window.removeEventListener("beforeinstallprompt", onInstallable);
-      window.removeEventListener("appinstalled", onInstalled);
-    };
-  }, []);
-
-  const install = useCallback(async () => {
-    if (installed) return;
-    if (prompt) {
-      await prompt.prompt();
-      await prompt.userChoice;
-      setPrompt(null);
-      return;
-    }
-    setShowGuide(true);
-  }, [installed, prompt]);
-
-  return {
-    browser,
-    installed,
-    canOneClickInstall: prompt !== null,
-    install,
-    showGuide,
-    setShowGuide,
-  };
+  try {
+    (deferredPrompt as any).prompt();
+    const result = await (deferredPrompt as any).userChoice;
+    deferredPrompt = null;
+    return result.outcome === "accepted";
+  } catch {
+    return false;
+  }
 }

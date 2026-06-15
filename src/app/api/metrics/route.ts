@@ -1,26 +1,22 @@
 import { NextResponse } from "next/server";
-import { resolveCredentials } from "@/lib/oauth/credentials";
-import { getAllAdapters } from "@/lib/platforms";
+import { syncAll } from "@/lib/api-sync";
+import { isDemoMode } from "@/lib/oauth/credentials";
+import { getDemoAccounts } from "@/lib/demo-data";
 
 export async function GET() {
   try {
-    const creds = await resolveCredentials();
-    const adapters = getAllAdapters(creds).filter((a) => a.isConfigured());
-    const platforms = await Promise.all(
-      adapters.map((a) => a.fetchMetrics())
-    );
+    if (isDemoMode()) {
+      return NextResponse.json({
+        demo: true,
+        accounts: getDemoAccounts(),
+      });
+    }
 
-    const totals = platforms.reduce(
-      (acc, p) => ({
-        likes: acc.likes + p.likes,
-        comments: acc.comments + p.comments,
-        shares: acc.shares + p.shares,
-        followers: acc.followers + p.followers,
-      }),
-      { likes: 0, comments: 0, shares: 0, followers: 0 }
-    );
-
-    return NextResponse.json({ platforms, totals });
+    const results = await syncAll();
+    return NextResponse.json({
+      demo: false,
+      results,
+    });
   } catch (e) {
     const message = e instanceof Error ? e.message : "Failed to fetch metrics";
     return NextResponse.json({ error: message }, { status: 500 });

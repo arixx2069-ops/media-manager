@@ -1,236 +1,257 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { ExternalLink, Plus, RefreshCw, Trash2 } from "lucide-react";
-import type { Platform } from "@prisma/client";
-import { PlatformBadge } from "@/components/platform-badge";
+import { useState, useCallback, useEffect } from "react";
 import {
-  PlatformConnect,
-  useOAuthReturnSync,
-} from "@/components/platform-connect";
+  Share2,
+  ExternalLink,
+  RefreshCw,
+  Plus,
+  Instagram,
+} from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
-import { syncAccountsFromApis } from "@/lib/api-sync";
-import {
-  ACCOUNT_PLATFORMS,
-  addAccount,
-  loadAccounts,
-  profileUrl,
-  removeAccount,
-  type ConnectedAccount,
-} from "@/lib/accounts";
+import { PlatformConnect } from "@/components/platform-connect";
+
+interface Account {
+  id: string;
+  platform: string;
+  username: string;
+  displayName?: string;
+  stats: {
+    followers: number;
+    likes: number;
+    comments: number;
+  };
+  connected: boolean;
+}
 
 export default function AccountsPage() {
   const { t } = useLocale();
-  const [accounts, setAccounts] = useState<ConnectedAccount[]>([]);
-  const [platform, setPlatform] = useState<Platform>("INSTAGRAM");
-  const [username, setUsername] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  const [followers, setFollowers] = useState("0");
-  const [likes, setLikes] = useState("0");
-  const [comments, setComments] = useState("0");
-  const [syncing, setSyncing] = useState(false);
-  const [banner, setBanner] = useState<string | null>(null);
+  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [metaConnected, setMetaConnected] = useState(false);
+  const [tikTokConnected, setTikTokConnected] = useState(false);
+  const [syncing, setSyncing] = useState<string | null>(null);
 
-  const reload = useCallback(() => {
-    setAccounts(loadAccounts());
+  const [newPlatform, setNewPlatform] = useState("instagram");
+  const [newUsername, setNewUsername] = useState("");
+  const [newDisplayName, setNewDisplayName] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "meta") {
+      setMetaConnected(true);
+      window.history.replaceState({}, "", "/accounts");
+    }
+    if (params.get("connected") === "tiktok") {
+      setTikTokConnected(true);
+      window.history.replaceState({}, "", "/accounts");
+    }
   }, []);
 
   useEffect(() => {
-    reload();
-    const err = new URLSearchParams(window.location.search).get("error");
-    if (err) {
-      setBanner(decodeURIComponent(err.replace(/\+/g, " ")));
-      window.history.replaceState({}, "", "/accounts");
-    }
-  }, [reload]);
-
-  useOAuthReturnSync(() => {
-    reload();
-    setBanner(t.dashboard.syncOk);
-  });
-
-  function handleAdd(e: FormEvent) {
-    e.preventDefault();
-    if (!username.trim()) return;
-    const updated = addAccount({
-      platform,
-      username: username.trim(),
-      displayName: displayName.trim() || username.trim(),
-      followers: Number(followers) || 0,
-      likes: Number(likes) || 0,
-      comments: Number(comments) || 0,
-      shares: 0,
-    });
-    setAccounts(updated);
-    setUsername("");
-    setDisplayName("");
-    setFollowers("0");
-    setLikes("0");
-    setComments("0");
-  }
-
-  function handleRemove(id: string) {
-    setAccounts(removeAccount(id));
-  }
-
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    try {
-      const result = await syncAccountsFromApis();
-      setAccounts(result.accounts);
-    } finally {
-      setSyncing(false);
-    }
+    fetch("/api/metrics")
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.accounts) setAccounts(data.accounts);
+      })
+      .catch(() => {});
   }, []);
 
+  const handleAddAccount = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newUsername.trim()) return;
+
+      const newAccount: Account = {
+        id: `acc-${Date.now()}`,
+        platform: newPlatform,
+        username: newUsername.trim(),
+        displayName: newDisplayName.trim() || newUsername.trim(),
+        stats: { followers: 0, likes: 0, comments: 0 },
+        connected: false,
+      };
+
+      setAccounts((prev) => [...prev, newAccount]);
+      setNewUsername("");
+      setNewDisplayName("");
+    },
+    [newPlatform, newUsername, newDisplayName]
+  );
+
+  const handleSync = useCallback(
+    async (platform: string) => {
+      setSyncing(platform);
+      try {
+        await fetch("/api/accounts/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ platform }),
+        });
+        const res = await fetch("/api/metrics");
+        const data = await res.json();
+        if (data.accounts) setAccounts(data.accounts);
+      } catch {
+        // ignore
+      } finally {
+        setSyncing(null);
+      }
+    },
+    []
+  );
+
   return (
-    <div className="page-shell max-w-3xl mx-auto w-full">
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold">{t.accounts.title}</h2>
-          <p className="text-[var(--muted)] mt-1">{t.accounts.subtitle}</p>
-        </div>
-        {accounts.length > 0 && (
-          <button
-            type="button"
-            onClick={handleSync}
-            disabled={syncing}
-            className="inline-flex items-center gap-2 border border-[var(--card-border)] hover:bg-[var(--card-hover)] text-sm px-4 py-2 rounded-lg"
-          >
-            <RefreshCw
-              className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`}
-            />
-            {t.accounts.syncLive}
-          </button>
-        )}
-      </header>
-
-      {banner && (
-        <p className="mb-4 text-sm rounded-lg border border-[var(--card-border)] bg-[var(--card)] px-4 py-3 text-[var(--muted)]">
-          {banner}
+    <div className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div>
+        <h1 className="font-display text-2xl font-semibold">
+          {t.accounts.title}
+        </h1>
+        <p className="text-sm text-[var(--muted)] mt-1">
+          {t.accounts.subtitle}
         </p>
-      )}
+      </div>
 
-      <PlatformConnect onSynced={reload} />
-
-      <form
-        onSubmit={handleAdd}
-        className="rounded-xl border border-[var(--card-border)] bg-[var(--card)] p-5 mb-8 space-y-4"
-      >
-        <h3 className="text-sm font-medium flex items-center gap-2">
-          <Plus className="w-4 h-4" /> {t.accounts.addAccount}
-        </h3>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.platform}
-            <select
-              value={platform}
-              onChange={(e) => setPlatform(e.target.value as Platform)}
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            >
-              {ACCOUNT_PLATFORMS.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.username}
-            <input
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              required
-              placeholder="yourname"
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.displayName}
-            <input
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.followers}
-            <input
-              type="number"
-              min={0}
-              value={followers}
-              onChange={(e) => setFollowers(e.target.value)}
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.likes}
-            <input
-              type="number"
-              min={0}
-              value={likes}
-              onChange={(e) => setLikes(e.target.value)}
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
-          <label className="text-xs text-[var(--muted)]">
-            {t.accounts.comments}
-            <input
-              type="number"
-              min={0}
-              value={comments}
-              onChange={(e) => setComments(e.target.value)}
-              className="mt-1 w-full bg-[var(--background)] border border-[var(--card-border)] rounded-lg px-3 py-2 text-sm"
-            />
-          </label>
+      <div className="editorial-card p-4 sm:p-6 space-y-4">
+        <div>
+          <h2 className="font-display text-base font-semibold">
+            {t.accounts.connectTitle}
+          </h2>
+          <p className="text-xs text-[var(--muted)] mt-1">
+            {t.accounts.connectHint}
+          </p>
         </div>
-        <button
-          type="submit"
-          className="btn-primary"
-        >
-          {t.accounts.addBtn}
-        </button>
-      </form>
+
+        <div className="space-y-3">
+          <PlatformConnect
+            platform="meta"
+            label={t.accounts.connectMeta}
+            isConnected={metaConnected}
+            onDisconnect={() => setMetaConnected(false)}
+          />
+          <PlatformConnect
+            platform="tiktok"
+            label={t.accounts.connectTikTok}
+            isConnected={tikTokConnected}
+            onDisconnect={() => setTikTokConnected(false)}
+          />
+        </div>
+
+        <p className="text-[0.62rem] text-[var(--muted)]">
+          {t.accounts.autoTrackNote}
+        </p>
+      </div>
+
+      <div className="editorial-card p-4 sm:p-6 space-y-4">
+        <h2 className="font-display text-base font-semibold">
+          {t.accounts.addAccount}
+        </h2>
+
+        <form onSubmit={handleAddAccount} className="space-y-3">
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-[var(--muted)] mb-1">
+              {t.accounts.platform}
+            </label>
+            <select
+              value={newPlatform}
+              onChange={(e) => setNewPlatform(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm bg-[var(--background)] border border-[var(--card-border)] rounded-xl text-[var(--foreground)]"
+            >
+              <option value="instagram">Instagram</option>
+              <option value="facebook">Facebook</option>
+              <option value="tiktok">TikTok</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-[var(--muted)] mb-1">
+              {t.accounts.username}
+            </label>
+            <input
+              type="text"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              required
+              className="w-full px-3 py-2.5 text-sm"
+              placeholder="username"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs uppercase tracking-wider text-[var(--muted)] mb-1">
+              {t.accounts.displayName}
+            </label>
+            <input
+              type="text"
+              value={newDisplayName}
+              onChange={(e) => setNewDisplayName(e.target.value)}
+              className="w-full px-3 py-2.5 text-sm"
+              placeholder="Optional"
+            />
+          </div>
+
+          <button type="submit" className="btn-primary w-full">
+            <Plus className="w-4 h-4" />
+            {t.accounts.addBtn}
+          </button>
+        </form>
+      </div>
 
       {accounts.length === 0 ? (
-        <p className="text-[var(--muted)] text-sm">{t.accounts.noAccounts}</p>
+        <div className="editorial-card p-8 text-center">
+          <Share2 className="w-8 h-8 mx-auto text-[var(--muted)] mb-3" />
+          <p className="text-sm text-[var(--muted)]">
+            {t.accounts.noAccounts}
+          </p>
+        </div>
       ) : (
-        <ul className="space-y-3">
-          {accounts.map((a) => (
-            <li
-              key={a.id}
-              className="editorial-card p-4 flex flex-wrap items-center gap-3"
+        <div className="space-y-3">
+          {accounts.map((account) => (
+            <div
+              key={account.id}
+              className="editorial-card p-4 flex items-center justify-between"
             >
-              <PlatformBadge platform={a.platform} />
-              <div className="flex-1 min-w-[140px]">
-                <p className="font-medium">@{a.username}</p>
-                <p className="text-sm text-[var(--muted)]">{a.displayName}</p>
-                <p className="text-xs text-[var(--muted)] mt-1 opacity-80">
-                  {a.followers.toLocaleString()} {t.dashboard.followersLabel} ·{" "}
-                  {a.likes.toLocaleString()} {t.dashboard.likes}
-                </p>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[0.62rem] uppercase tracking-wider text-[var(--accent)] font-medium">
+                    {account.platform}
+                  </span>
+                </div>
+                <p className="font-medium truncate">@{account.username}</p>
+                <div className="flex items-center gap-3 mt-1 text-xs text-[var(--muted)]">
+                  <span>{account.stats.followers.toLocaleString()} followers</span>
+                  <span>{account.stats.likes.toLocaleString()} likes</span>
+                  <span>{account.stats.comments.toLocaleString()} comments</span>
+                </div>
               </div>
-              <a
-                href={profileUrl(a.platform, a.username)}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-link px-3 py-2"
-                style={{ background: "var(--accent-soft)" }}
-              >
-                <ExternalLink className="w-4 h-4" />
-                {t.accounts.visit}
-              </a>
-              <button
-                type="button"
-                onClick={() => handleRemove(a.id)}
-                className="p-2 text-[var(--muted)] hover:text-red-500 rounded-lg hover:bg-red-500/10"
-                aria-label="Remove account"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </li>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => handleSync(account.platform)}
+                  disabled={syncing === account.platform}
+                  className="btn-secondary text-xs"
+                >
+                  <RefreshCw
+                    className={`w-3 h-3 ${
+                      syncing === account.platform ? "animate-spin" : ""
+                    }`}
+                  />
+                  {t.accounts.syncLive}
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    window.open(
+                      `https://${account.platform}.com/${account.username}`,
+                      "_blank"
+                    )
+                  }
+                  className="btn-secondary text-xs"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                  {t.accounts.visit}
+                </button>
+              </div>
+            </div>
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

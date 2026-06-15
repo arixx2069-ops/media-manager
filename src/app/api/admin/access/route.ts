@@ -1,52 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { NextResponse } from "next/server";
 
-const prisma = new PrismaClient();
-
-export const runtime = "nodejs";
-
-// GET - List all access control users
-export async function GET() {
-  try {
-    const users = await prisma.accessControl.findMany({
-      orderBy: { createdAt: "desc" },
-    });
-    return NextResponse.json({ users });
-  } catch (error) {
-    console.error("Failed to fetch access control users:", error);
-    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
-  }
+interface AccessEntry {
+  id: string;
+  name: string;
+  platform: string;
+  role: string;
+  createdAt: string;
 }
 
-// POST - Add new user to access control
-export async function POST(request: NextRequest) {
+let accessList: AccessEntry[] = [];
+
+export async function GET() {
+  return NextResponse.json({ entries: accessList });
+}
+
+export async function POST(request: Request) {
   try {
-    const { email, name } = await request.json();
-
-    if (!email) {
-      return NextResponse.json({ error: "Email is required" }, { status: 400 });
-    }
-
-    // Check if user already exists
-    const existing = await prisma.accessControl.findUnique({
-      where: { email },
-    });
-
-    if (existing) {
-      return NextResponse.json({ error: "User already exists" }, { status: 409 });
-    }
-
-    const user = await prisma.accessControl.create({
-      data: {
-        email,
-        name: name || null,
-        status: "pending",
-      },
-    });
-
-    return NextResponse.json({ user });
-  } catch (error) {
-    console.error("Failed to create access control user:", error);
-    return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+    const body = await request.json();
+    const entry: AccessEntry = {
+      id: `access-${Date.now()}`,
+      name: body.name ?? "Unknown",
+      platform: body.platform ?? "all",
+      role: body.role ?? "viewer",
+      createdAt: new Date().toISOString(),
+    };
+    accessList.push(entry);
+    return NextResponse.json({ entry });
+  } catch {
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   }
 }

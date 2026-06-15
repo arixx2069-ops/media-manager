@@ -1,52 +1,47 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-import { messages, type Locale } from "@/lib/i18n";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import type { ReactNode } from "react";
+import { messages, type Locale } from "@/lib/i18n/messages";
 
 const STORAGE_KEY = "aeen-iq-locale";
 
-type Messages = (typeof messages)[Locale];
-
-type LocaleContextValue = {
+interface LocaleContextValue {
   locale: Locale;
-  setLocale: (locale: Locale) => void;
-  t: Messages;
+  setLocale: (l: Locale) => void;
+  t: (typeof messages)["en"];
   dir: "ltr" | "rtl";
-};
+}
 
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
-export function LocaleProvider({ children }: { children: React.ReactNode }) {
+function applyLocale(locale: Locale) {
+  document.documentElement.lang = locale;
+  document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
+  document.body.style.fontFamily =
+    locale === "ar"
+      ? "var(--font-arabic), var(--font-mono), ui-monospace, monospace"
+      : "var(--font-mono), var(--font-arabic), ui-monospace, monospace";
+}
+
+export function LocaleProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as Locale | null;
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (stored === "en" || stored === "ar") {
       setLocaleState(stored);
     }
   }, []);
 
-  const setLocale = useCallback((next: Locale) => {
-    setLocaleState(next);
-    localStorage.setItem(STORAGE_KEY, next);
-    document.documentElement.lang = next;
-    document.documentElement.dir = next === "ar" ? "rtl" : "ltr";
+  const setLocale = useCallback((l: Locale) => {
+    setLocaleState(l);
+    localStorage.setItem(STORAGE_KEY, l);
+    applyLocale(l);
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = locale;
-    document.documentElement.dir = locale === "ar" ? "rtl" : "ltr";
-    document.body.style.fontFamily =
-      locale === "ar"
-        ? "var(--font-arabic), var(--font-mono), ui-monospace, monospace"
-        : "var(--font-mono), var(--font-arabic), ui-monospace, monospace";
+    applyLocale(locale);
   }, [locale]);
 
   const value = useMemo(
@@ -54,7 +49,7 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
       locale,
       setLocale,
       t: messages[locale],
-      dir: (locale === "ar" ? "rtl" : "ltr") as "ltr" | "rtl",
+      dir: locale === "ar" ? "rtl" : "ltr" as "ltr" | "rtl",
     }),
     [locale, setLocale]
   );

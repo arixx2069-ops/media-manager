@@ -1,33 +1,23 @@
 import { NextResponse } from "next/server";
-import {
-  isMetaConfigured,
-  isTikTokConfigured,
-  resolveCredentials,
-} from "@/lib/oauth/credentials";
+import { isDemoMode, hasMetaCredentials, hasTikTokCredentials, getMetaCredentials, getTikTokCredentials } from "@/lib/oauth/credentials";
 
 export async function GET() {
-  const creds = await resolveCredentials();
+  const demo = isDemoMode();
 
   return NextResponse.json({
+    demoMode: demo,
     meta: {
-      connected: isMetaConfigured(creds),
-      instagram: creds.meta?.igAccountId
-        ? {
-            username: creds.meta.igUsername ?? "instagram",
-            accountId: creds.meta.igAccountId,
-          }
-        : null,
-      facebook: creds.meta?.pageId
-        ? {
-            name: creds.meta.pageName ?? "facebook",
-            pageId: creds.meta.pageId,
-          }
-        : null,
+      configured: hasMetaCredentials(),
+      hasToken: !!getMetaCredentials(),
     },
     tiktok: {
-      connected: isTikTokConfigured(creds),
-      username: creds.tiktok?.username ?? null,
-      displayName: creds.tiktok?.displayName ?? null,
+      configured: hasTikTokCredentials(),
+      hasToken: !!getTikTokCredentials(),
+    },
+    env: {
+      hasSitePassword: !!process.env.SITE_PASSWORD,
+      hasAuthSecret: !!process.env.AUTH_SECRET,
+      hasAppUrl: !!process.env.NEXT_PUBLIC_APP_URL,
     },
   });
 }

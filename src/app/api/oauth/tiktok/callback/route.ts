@@ -10,6 +10,7 @@ import { exchangeTikTokCode } from "@/lib/oauth/tiktok-flow";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+
   const error = searchParams.get("error_description") ?? searchParams.get("error");
   if (error) {
     return NextResponse.redirect(
