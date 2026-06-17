@@ -7,6 +7,22 @@ import {
   setSignedCookie,
 } from "@/lib/oauth/cookies";
 import { exchangeMetaCode } from "@/lib/oauth/meta-flow";
+import { syncAll } from "@/lib/api-sync";
+
+export async function POST(request: Request) {
+  try {
+    const payload = await request.json();
+    const entries = payload?.entry ?? [];
+
+    if (entries.length > 0) {
+      await syncAll();
+    }
+
+    return NextResponse.json({ status: "ok" });
+  } catch {
+    return NextResponse.json({ status: "ok" });
+  }
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
