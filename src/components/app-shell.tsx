@@ -17,6 +17,7 @@ import {
   Moon,
   Languages,
   LogOut,
+  Send,
 } from "lucide-react";
 import { useLocale } from "@/components/locale-provider";
 import { useTheme } from "@/components/theme-provider";
@@ -32,6 +33,7 @@ interface NavItem {
 
 const sidebarNav: NavItem[] = [
   { href: "/", key: "dashboard", icon: LayoutDashboard },
+  { href: "/post", key: "post", icon: Send, highlight: true },
   { href: "/advisor", key: "advisor", icon: Sparkles, highlight: true },
   { href: "/accounts", key: "accounts", icon: Share2 },
   { href: "/comments", key: "comments", icon: MessageCircle },
@@ -42,6 +44,7 @@ const sidebarNav: NavItem[] = [
 
 const bottomNav: NavItem[] = [
   { href: "/", key: "dashboard", icon: LayoutDashboard },
+  { href: "/post", key: "post", icon: Send },
   { href: "/advisor", key: "advisor", icon: Sparkles },
   { href: "/accounts", key: "accounts", icon: Share2 },
   { href: "/comments", key: "comments", icon: MessageCircle },
